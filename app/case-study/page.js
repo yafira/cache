@@ -13,10 +13,11 @@ export default function CaseStudy() {
           <div className={styles.heroEyebrow}>case study</div>
           <h1 className={styles.heroTitle}>cache</h1>
           <p className={styles.heroThesis}>
-            a moodboard tool for people who dread opening figma just to arrange
-            references. paste anything — an image, a link, a pdf — and it's
-            already on the board. no account, no "create new project" dialog, no
-            auto layout to fight with.
+            a moodboard tool for the low-stakes moments — when arranging a few
+            references doesn't need a whole design file behind it. paste
+            anything — an image, a link, a pdf — and it's already on the board.
+            no account, no "create new project" dialog, no auto layout to fight
+            with.
           </p>
           <div className={styles.heroMeta}>
             <div className={styles.heroMetaItem}>
@@ -87,10 +88,12 @@ export default function CaseStudy() {
             moodboards aren't the killer feature
           </h2>
           <p className={styles.prose}>
-            i like making moodboards for my own projects, and i find it dreadful
-            every time — opening figma just to drag some references around feels
-            like using a table saw to cut a piece of tape. the actual want
-            underneath that is simple:{" "}
+            don't get me wrong — figma is my main design tool, i genuinely love
+            it. but there's a specific moment where it's the wrong tool for the
+            job: i just want to drag a few references together, low stakes,
+            nothing structural, and opening a full design file for that is like
+            using a table saw to cut a piece of tape. the actual want underneath
+            that is simple:{" "}
             <b>collect things fast, arrange them loosely, move on.</b>
           </p>
           <p className={styles.prose}>
