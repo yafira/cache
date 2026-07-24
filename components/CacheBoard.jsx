@@ -1,10 +1,24 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Type, Square, Image as ImageIcon, Download, Link2, Trash2, ChevronUp, ChevronDown, X, Undo2, FileText, ExternalLink, Paperclip } from "lucide-react";
+import {
+  Type,
+  Square,
+  Image as ImageIcon,
+  Download,
+  Link2,
+  Trash2,
+  ChevronUp,
+  ChevronDown,
+  X,
+  Undo2,
+  FileText,
+  ExternalLink,
+  Paperclip,
+} from "lucide-react";
 import styles from "./CacheBoard.module.css";
 
-// ---- constants ----
+// constants
 const BOARD_W = 1400;
 const BOARD_H = 900;
 const MOBILE_BREAKPOINT = 768;
@@ -38,7 +52,11 @@ const PATTERNS = [
 function patternCSS(patternId) {
   switch (patternId) {
     case "dots":
-      return { backgroundImage: "radial-gradient(rgba(13,13,12,0.16) 1.4px, transparent 1.4px)", backgroundSize: "18px 18px" };
+      return {
+        backgroundImage:
+          "radial-gradient(rgba(13,13,12,0.16) 1.4px, transparent 1.4px)",
+        backgroundSize: "18px 18px",
+      };
     case "grid":
       return {
         backgroundImage:
@@ -47,7 +65,8 @@ function patternCSS(patternId) {
       };
     case "diagonal":
       return {
-        backgroundImage: "repeating-linear-gradient(45deg, rgba(13,13,12,0.14) 0 1.5px, transparent 1.5px 14px)",
+        backgroundImage:
+          "repeating-linear-gradient(45deg, rgba(13,13,12,0.14) 0 1.5px, transparent 1.5px 14px)",
         backgroundSize: "auto",
       };
     default:
@@ -95,11 +114,17 @@ const newId = () => `el-${idCounter++}`;
 const URL_PATTERN = /^https?:\/\/[^\s]+$/i;
 
 function escapeHtml(str) {
-  return String(str ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  return String(str ?? "").replace(
+    /[&<>]/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c],
+  );
 }
 
 function escapeAttr(str) {
-  return String(str ?? "").replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" }[c]));
+  return String(str ?? "").replace(
+    /[&"<>]/g,
+    (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" })[c],
+  );
 }
 
 function loadImage(src, allowCrossOrigin) {
@@ -170,7 +195,7 @@ export default function CacheBoard() {
   const [editingId, setEditingId] = useState(null);
   const selected = elements.find((e) => e.id === selectedId) || null;
 
-  // ---- responsive: track viewport and compute a fit-to-width scale for the board ----
+  // responsive: track viewport and compute a fit-to-width scale for the board
   useEffect(() => {
     const compute = () => {
       const vw = window.innerWidth;
@@ -186,7 +211,7 @@ export default function CacheBoard() {
     return () => window.removeEventListener("resize", compute);
   }, []);
 
-  // ---- load state from URL hash on mount (the "share link" mechanism) ----
+  // load state from URL hash on mount (the "share link" mechanism)
   useEffect(() => {
     try {
       const hash = window.location.hash;
@@ -197,7 +222,10 @@ export default function CacheBoard() {
           setCanvasBg(decoded.canvasBg || BONE);
           setCanvasPattern(decoded.canvasPattern || "none");
           setCanvasImage(decoded.canvasImage || null);
-          const maxZ = Math.max(1, ...decoded.elements.map((e) => e.zIndex || 1));
+          const maxZ = Math.max(
+            1,
+            ...decoded.elements.map((e) => e.zIndex || 1),
+          );
           zCounter.current = maxZ + 1;
           idCounter = decoded.elements.length + 1;
         }
@@ -209,7 +237,13 @@ export default function CacheBoard() {
 
   const addElement = useCallback((el) => {
     zCounter.current += 1;
-    const full = { rotation: 0, opacity: 1, radius: 0, zIndex: zCounter.current, ...el };
+    const full = {
+      rotation: 0,
+      opacity: 1,
+      radius: 0,
+      zIndex: zCounter.current,
+      ...el,
+    };
     setElements((prev) => {
       pushHistory(prev);
       return [...prev, full];
@@ -246,8 +280,8 @@ export default function CacheBoard() {
     });
   };
 
-  // ---- links: create immediately with a placeholder, then enrich once the
-  // server-side unfurl route returns a title/description/image ----
+  // links: create immediately with a placeholder, then enrich once the
+  // server-side unfurl route returns a title/description/image
   const addLink = (rawUrl) => {
     const url = rawUrl.trim();
     if (!URL_PATTERN.test(url)) return;
@@ -278,7 +312,12 @@ export default function CacheBoard() {
       .then((res) => res.json())
       .then((data) => {
         if (data && !data.error) {
-          updateElement(id, { title: data.title, description: data.description, image: data.image, domain: data.domain });
+          updateElement(id, {
+            title: data.title,
+            description: data.description,
+            image: data.image,
+            domain: data.domain,
+          });
         } else if (data) {
           updateElement(id, { domain: data.domain || domain });
         }
@@ -288,8 +327,8 @@ export default function CacheBoard() {
       });
   };
 
-  // ---- files: PDFs and other documents, stored inline as a data URL (same
-  // no-backend approach as images) ----
+  // files: PDFs and other documents, stored inline as a data URL (same
+  // no-backend approach as images)
   const handleFileUpload = (file) => {
     if (!file) return;
     const { dx, dy } = nextOffset();
@@ -324,7 +363,9 @@ export default function CacheBoard() {
           const targetW = 260;
           const targetH = (img.height / img.width) * targetW;
           const baseX = dropPos ? dropPos.x - targetW / 2 : BOARD_W / 2 - 130;
-          const baseY = dropPos ? dropPos.y - targetH / 2 : BOARD_H / 2 - targetH / 2;
+          const baseY = dropPos
+            ? dropPos.y - targetH / 2
+            : BOARD_H / 2 - targetH / 2;
           addElement({
             id: newId(),
             type: "image",
@@ -349,7 +390,7 @@ export default function CacheBoard() {
     reader.readAsDataURL(file);
   };
 
-  // ---- remove background from an image piece on the board (client-side ML, no backend) ----
+  // remove background from an image piece on the board (client-side ML, no backend)
   const removeImageBackground = async (id) => {
     const el = elements.find((e) => e.id === id);
     if (!el || el.type !== "image") return;
@@ -371,7 +412,9 @@ export default function CacheBoard() {
       };
       reader.readAsDataURL(blob);
     } catch (err) {
-      setBgRemovalError("couldn't remove background — check your connection and try again");
+      setBgRemovalError(
+        "couldn't remove background — check your connection and try again",
+      );
       setBgRemovalId(null);
     }
   };
@@ -383,7 +426,7 @@ export default function CacheBoard() {
     updateElement(id, { src: el.originalSrc });
   };
 
-  // ---- paste support: images and plain text land straight on the board ----
+  // paste support: images and plain text land straight on the board
   useEffect(() => {
     const onPaste = (e) => {
       const items = e.clipboardData?.items;
@@ -428,7 +471,9 @@ export default function CacheBoard() {
   }, []);
 
   const updateElement = (id, patch) =>
-    setElements((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+    setElements((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, ...patch } : e)),
+    );
 
   const deleteElement = (id) => {
     setElements((prev) => {
@@ -444,7 +489,7 @@ export default function CacheBoard() {
   };
   const sendToBack = (id) => updateElement(id, { zIndex: 0 });
 
-  // ---- drag (pointer events cover touch + mouse; divide by scale so screen px map to board px) ----
+  // drag (pointer events cover touch + mouse; divide by scale so screen px map to board px)
   const onPointerDownElement = (e, el) => {
     e.stopPropagation();
     pushHistory(elements);
@@ -472,7 +517,7 @@ export default function CacheBoard() {
     window.removeEventListener("pointerup", onPointerUpDrag);
   };
 
-  // ---- resize ----
+  // resize
   const onPointerDownResize = (e, el) => {
     e.stopPropagation();
     pushHistory(elements);
@@ -502,7 +547,7 @@ export default function CacheBoard() {
     window.removeEventListener("pointerup", onPointerUpResize);
   };
 
-  // ---- export to PNG (always renders at full BOARD_W/BOARD_H regardless of on-screen scale) ----
+  // export to PNG (always renders at full BOARD_W/BOARD_H regardless of on-screen scale)
   const handleExport = async () => {
     const canvas = document.createElement("canvas");
     canvas.width = BOARD_W;
@@ -529,7 +574,9 @@ export default function CacheBoard() {
       ctx.fillRect(0, 0, BOARD_W, BOARD_H);
     }
 
-    const sorted = [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+    const sorted = [...elements].sort(
+      (a, b) => (a.zIndex || 0) - (b.zIndex || 0),
+    );
     for (const el of sorted) {
       ctx.save();
       const cx = el.x + el.w / 2;
@@ -561,7 +608,14 @@ export default function CacheBoard() {
         ctx.fillStyle = el.textColor || INK;
         ctx.font = `${el.fontSize || 16}px ui-monospace, monospace`;
         ctx.textBaseline = "top";
-        wrapText(ctx, el.text || "", 14, 14, el.w - 28, (el.fontSize || 16) * 1.35);
+        wrapText(
+          ctx,
+          el.text || "",
+          14,
+          14,
+          el.w - 28,
+          (el.fontSize || 16) * 1.35,
+        );
       } else if (el.type === "link") {
         ctx.fillStyle = "#ffffff";
         roundRectPath(ctx, 0, 0, el.w, el.h, el.radius || 0);
@@ -601,7 +655,12 @@ export default function CacheBoard() {
         ctx.fillStyle = INK;
         ctx.font = "600 13px ui-monospace, monospace";
         ctx.textBaseline = "top";
-        ctx.fillText((el.title || el.url || "").slice(0, 40), 12, imgH + 10, el.w - 24);
+        ctx.fillText(
+          (el.title || el.url || "").slice(0, 40),
+          12,
+          imgH + 10,
+          el.w - 24,
+        );
         ctx.fillStyle = "rgba(13,13,12,0.5)";
         ctx.font = "11px ui-monospace, monospace";
         ctx.fillText(el.domain || "", 12, imgH + 28, el.w - 24);
@@ -618,14 +677,19 @@ export default function CacheBoard() {
         ctx.font = "600 13px ui-monospace, monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "alphabetic";
-        ctx.fillText((el.name || "file").slice(0, 30), el.w / 2, el.h / 2 + 4, el.w - 24);
+        ctx.fillText(
+          (el.name || "file").slice(0, 30),
+          el.w / 2,
+          el.h / 2 + 4,
+          el.w - 24,
+        );
         ctx.fillStyle = "rgba(13,13,12,0.5)";
         ctx.font = "10px ui-monospace, monospace";
         ctx.fillText(
           `${(el.fileType || "file").split("/").pop()} · ${Math.round((el.size || 0) / 1024)}kb`,
           el.w / 2,
           el.h / 2 + 22,
-          el.w - 24
+          el.w - 24,
         );
         ctx.textAlign = "left";
       }
@@ -642,21 +706,23 @@ export default function CacheBoard() {
     });
   };
 
-  // ---- export as a standalone HTML file — the "functional" export.
+  // export as a standalone HTML file — the "functional" export.
   // Unlike the PNG, link cards stay real <a> tags and file cards stay
   // real openable/downloadable links; no backend involved, it's just a
-  // single self-contained file. ----
+  // single self-contained file.
   const handleExportHTML = () => {
     const bg = canvasImage
       ? `background-image:url('${escapeAttr(canvasImage)}');background-size:cover;background-position:center;background-color:${canvasBg};`
       : canvasPattern !== "none"
-      ? (() => {
-          const p = patternCSS(canvasPattern);
-          return `background-color:${canvasBg};background-image:${p.backgroundImage};background-size:${p.backgroundSize};`;
-        })()
-      : `background-color:${canvasBg};`;
+        ? (() => {
+            const p = patternCSS(canvasPattern);
+            return `background-color:${canvasBg};background-image:${p.backgroundImage};background-size:${p.backgroundSize};`;
+          })()
+        : `background-color:${canvasBg};`;
 
-    const sorted = [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+    const sorted = [...elements].sort(
+      (a, b) => (a.zIndex || 0) - (b.zIndex || 0),
+    );
 
     const pieces = sorted
       .map((el) => {
@@ -671,7 +737,8 @@ export default function CacheBoard() {
           return `<div style="${common}"><img src="${escapeAttr(el.src)}" style="width:100%;height:100%;object-fit:cover;display:block;" alt="" /></div>`;
         }
         if (el.type === "text") {
-          const textBg = el.bg && el.bg !== "transparent" ? el.bg : "transparent";
+          const textBg =
+            el.bg && el.bg !== "transparent" ? el.bg : "transparent";
           return `<div style="${common}background:${textBg};padding:14px;font-family:ui-monospace,monospace;font-size:${
             el.fontSize || 16
           }px;color:${el.textColor || INK};white-space:pre-wrap;word-break:break-word;">${escapeHtml(el.text)}</div>`;
@@ -681,17 +748,17 @@ export default function CacheBoard() {
             ? `<div style="flex:1;background-image:url('${escapeAttr(el.image)}');background-size:cover;background-position:center;"></div>`
             : `<div style="flex:1;background:rgba(13,13,12,0.06);"></div>`;
           return `<a href="${escapeAttr(el.url)}" target="_blank" rel="noopener noreferrer" style="${common}display:flex;flex-direction:column;background:#fff;border:1px solid rgba(13,13,12,0.2);text-decoration:none;color:inherit;">${imgHtml}<div style="padding:10px 12px;flex-shrink:0;"><div style="font-family:ui-monospace,monospace;font-weight:600;font-size:13px;color:#0d0d0c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(
-            el.title
+            el.title,
           )}</div><div style="font-family:ui-monospace,monospace;font-size:11px;color:rgba(13,13,12,0.5);margin-top:2px;">${escapeHtml(
-            el.domain
+            el.domain,
           )}</div></div></a>`;
         }
         if (el.type === "file") {
           const meta = `${(el.fileType || "file").split("/").pop()} · ${Math.round((el.size || 0) / 1024)}kb — click to open`;
           return `<a href="${escapeAttr(el.dataUrl)}" download="${escapeAttr(el.name)}" target="_blank" style="${common}display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;border:1px solid rgba(13,13,12,0.2);text-decoration:none;color:inherit;padding:12px;text-align:center;"><div style="font-family:ui-monospace,monospace;font-weight:600;font-size:12px;color:#0d0d0c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${escapeHtml(
-            el.name
+            el.name,
           )}</div><div style="font-family:ui-monospace,monospace;font-size:10px;color:rgba(13,13,12,0.5);text-transform:uppercase;">${escapeHtml(
-            meta
+            meta,
           )}</div></a>`;
         }
         return "";
@@ -721,9 +788,14 @@ export default function CacheBoard() {
     URL.revokeObjectURL(url);
   };
 
-  // ---- share link (state packed into the URL hash — no backend needed for this starter) ----
+  // share link (state packed into the URL hash — no backend needed for this starter)
   const handleShare = async () => {
-    const payload = JSON.stringify({ elements, canvasBg, canvasPattern, canvasImage });
+    const payload = JSON.stringify({
+      elements,
+      canvasBg,
+      canvasPattern,
+      canvasImage,
+    });
     const encoded = btoa(encodeURIComponent(payload));
     const url = `${window.location.origin}${window.location.pathname}#patch=${encoded}`;
     window.location.hash = `patch=${encoded}`;
@@ -736,53 +808,76 @@ export default function CacheBoard() {
     setTimeout(() => setCopyStatus(""), 2000);
   };
 
-  // ---- close the background popover when clicking outside it ----
+  // close the background popover when clicking outside it
   useEffect(() => {
     if (!bgPanelOpen) return;
     const onClickOutside = (e) => {
-      if (bgPanelRef.current?.contains(e.target) || bgButtonRef.current?.contains(e.target)) return;
+      if (
+        bgPanelRef.current?.contains(e.target) ||
+        bgButtonRef.current?.contains(e.target)
+      )
+        return;
       setBgPanelOpen(false);
     };
     window.addEventListener("pointerdown", onClickOutside);
     return () => window.removeEventListener("pointerdown", onClickOutside);
   }, [bgPanelOpen]);
 
-  // ---- close the link-add popover when clicking outside it ----
+  // close the link-add popover when clicking outside it
   useEffect(() => {
     if (!linkPanelOpen) return;
     const onClickOutside = (e) => {
-      if (linkPanelRef.current?.contains(e.target) || linkButtonRef.current?.contains(e.target)) return;
+      if (
+        linkPanelRef.current?.contains(e.target) ||
+        linkButtonRef.current?.contains(e.target)
+      )
+        return;
       setLinkPanelOpen(false);
     };
     window.addEventListener("pointerdown", onClickOutside);
     return () => window.removeEventListener("pointerdown", onClickOutside);
   }, [linkPanelOpen]);
 
-  // ---- close the download-options popover when clicking outside it ----
+  // close the download-options popover when clicking outside it
   useEffect(() => {
     if (!downloadPanelOpen) return;
     const onClickOutside = (e) => {
-      if (downloadPanelRef.current?.contains(e.target) || downloadButtonRef.current?.contains(e.target)) return;
+      if (
+        downloadPanelRef.current?.contains(e.target) ||
+        downloadButtonRef.current?.contains(e.target)
+      )
+        return;
       setDownloadPanelOpen(false);
     };
     window.addEventListener("pointerdown", onClickOutside);
     return () => window.removeEventListener("pointerdown", onClickOutside);
   }, [downloadPanelOpen]);
 
-  // ---- keyboard shortcuts: delete/backspace removes the selected piece, cmd/ctrl+z undoes ----
+  // keyboard shortcuts: delete/backspace removes the selected piece, cmd/ctrl+z undoes
   useEffect(() => {
     const onKeyDown = (e) => {
       const active = document.activeElement;
       const isTypingSomewhere =
-        active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable);
+        active &&
+        (active.tagName === "INPUT" ||
+          active.tagName === "TEXTAREA" ||
+          active.isContentEditable);
 
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedId && !isTypingSomewhere) {
+      if (
+        (e.key === "Delete" || e.key === "Backspace") &&
+        selectedId &&
+        !isTypingSomewhere
+      ) {
         e.preventDefault();
         deleteElement(selectedId);
         return;
       }
 
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z" && !isTypingSomewhere) {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.key.toLowerCase() === "z" &&
+        !isTypingSomewhere
+      ) {
         e.preventDefault();
         undo();
       }
@@ -826,8 +921,12 @@ export default function CacheBoard() {
           ))}
         </div>
 
-        <button onClick={() => fileInputRef.current?.click()} className={styles.btn}>
-          <ImageIcon size={13} /> <span className={styles.hideOnMobile}>image</span>
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className={styles.btn}
+        >
+          <ImageIcon size={13} />{" "}
+          <span className={styles.hideOnMobile}>image</span>
         </button>
         <input
           ref={fileInputRef}
@@ -844,7 +943,8 @@ export default function CacheBoard() {
             onClick={() => setLinkPanelOpen((v) => !v)}
             className={styles.btn}
           >
-            <Link2 size={13} /> <span className={styles.hideOnMobile}>link</span>
+            <Link2 size={13} />{" "}
+            <span className={styles.hideOnMobile}>link</span>
           </button>
           {linkPanelOpen && (
             <div ref={linkPanelRef} className={styles.bgPanel}>
@@ -868,7 +968,11 @@ export default function CacheBoard() {
                   autoFocus
                   className={styles.linkTextInput}
                 />
-                <button type="submit" className={styles.smallBtn} style={{ marginTop: 0 }}>
+                <button
+                  type="submit"
+                  className={styles.smallBtn}
+                  style={{ marginTop: 0 }}
+                >
                   add
                 </button>
               </form>
@@ -876,8 +980,12 @@ export default function CacheBoard() {
           )}
         </div>
 
-        <button onClick={() => fileUploadInputRef.current?.click()} className={styles.btn}>
-          <Paperclip size={13} /> <span className={styles.hideOnMobile}>file</span>
+        <button
+          onClick={() => fileUploadInputRef.current?.click()}
+          className={styles.btn}
+        >
+          <Paperclip size={13} />{" "}
+          <span className={styles.hideOnMobile}>file</span>
         </button>
         <input
           ref={fileUploadInputRef}
@@ -902,7 +1010,9 @@ export default function CacheBoard() {
                 width: 14,
                 height: 14,
                 border: "1px solid rgba(236,231,219,0.5)",
-                background: canvasImage ? `url(${canvasImage}) center/cover` : canvasBg,
+                background: canvasImage
+                  ? `url(${canvasImage}) center/cover`
+                  : canvasBg,
               }}
             />
           </button>
@@ -934,13 +1044,22 @@ export default function CacheBoard() {
               <div className={styles.bgPanelLabel}>background image</div>
               {canvasImage ? (
                 <div className={styles.bgImagePreviewRow}>
-                  <div className={styles.bgImagePreview} style={{ backgroundImage: `url(${canvasImage})` }} />
-                  <button onClick={() => setCanvasImage(null)} className={styles.smallBtn}>
+                  <div
+                    className={styles.bgImagePreview}
+                    style={{ backgroundImage: `url(${canvasImage})` }}
+                  />
+                  <button
+                    onClick={() => setCanvasImage(null)}
+                    className={styles.smallBtn}
+                  >
                     remove
                   </button>
                 </div>
               ) : (
-                <button onClick={() => bgImageInputRef.current?.click()} className={styles.smallBtn}>
+                <button
+                  onClick={() => bgImageInputRef.current?.click()}
+                  className={styles.smallBtn}
+                >
                   upload image
                 </button>
               )}
@@ -949,31 +1068,51 @@ export default function CacheBoard() {
                 type="file"
                 accept="image/*"
                 hidden
-                onChange={(e) => e.target.files?.[0] && handleBgImage(e.target.files[0])}
+                onChange={(e) =>
+                  e.target.files?.[0] && handleBgImage(e.target.files[0])
+                }
               />
             </div>
           )}
         </div>
 
         <div className={styles.toolbarEnd}>
-          {copyStatus && <span className={`${styles.copyStatus} ${styles.hideOnMobile}`}>{copyStatus}</span>}
-          <button onClick={undo} className={styles.btn} title="undo (cmd/ctrl+z)">
+          {copyStatus && (
+            <span className={`${styles.copyStatus} ${styles.hideOnMobile}`}>
+              {copyStatus}
+            </span>
+          )}
+          <button
+            onClick={undo}
+            className={styles.btn}
+            title="undo (cmd/ctrl+z)"
+          >
             <Undo2 size={13} /> <span className={styles.hideBelowMd}>undo</span>
           </button>
           <button onClick={handleShare} className={styles.btn}>
-            <Link2 size={13} /> <span className={styles.hideBelowMd}>share</span>
+            <Link2 size={13} />{" "}
+            <span className={styles.hideBelowMd}>share</span>
           </button>
           <div style={{ position: "relative" }}>
             <button
               ref={downloadButtonRef}
               onClick={() => setDownloadPanelOpen((v) => !v)}
-              style={{ borderColor: BUTTER, background: BUTTER, border: "1px solid " + BUTTER }}
+              style={{
+                borderColor: BUTTER,
+                background: BUTTER,
+                border: "1px solid " + BUTTER,
+              }}
               className={`${styles.btn} ${styles.btnPrimary}`}
             >
-              <Download size={13} /> <span className={styles.hideBelowMd}>download</span>
+              <Download size={13} />{" "}
+              <span className={styles.hideBelowMd}>download</span>
             </button>
             {downloadPanelOpen && (
-              <div ref={downloadPanelRef} className={styles.bgPanel} style={{ right: 0, left: "auto" }}>
+              <div
+                ref={downloadPanelRef}
+                className={styles.bgPanel}
+                style={{ right: 0, left: "auto" }}
+              >
                 <div className={styles.bgPanelLabel}>export as</div>
                 <button
                   onClick={() => {
@@ -1004,7 +1143,13 @@ export default function CacheBoard() {
       <div className={styles.body}>
         {/* board */}
         <div ref={boardWrapRef} className={styles.boardWrap}>
-          <div style={{ width: BOARD_W * scale, height: BOARD_H * scale, flexShrink: 0 }}>
+          <div
+            style={{
+              width: BOARD_W * scale,
+              height: BOARD_H * scale,
+              flexShrink: 0,
+            }}
+          >
             <div
               ref={boardRef}
               onPointerDown={() => setSelectedId(null)}
@@ -1013,7 +1158,10 @@ export default function CacheBoard() {
                 if (!isDraggingOver) setIsDraggingOver(true);
               }}
               onDragLeave={(e) => {
-                if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget)) {
+                if (
+                  e.currentTarget === e.target ||
+                  !e.currentTarget.contains(e.relatedTarget)
+                ) {
                   setIsDraggingOver(false);
                 }
               }}
@@ -1034,7 +1182,11 @@ export default function CacheBoard() {
                 height: BOARD_H,
                 backgroundColor: canvasBg,
                 ...(canvasImage
-                  ? { backgroundImage: `url(${canvasImage})`, backgroundSize: "cover", backgroundPosition: "center" }
+                  ? {
+                      backgroundImage: `url(${canvasImage})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }
                   : patternCSS(canvasPattern)),
                 position: "relative",
                 boxShadow: isDraggingOver
@@ -1050,38 +1202,64 @@ export default function CacheBoard() {
                 <div className={styles.dropOverlay}>drop to add</div>
               )}
               {elements.length === 0 && (
-                <div className={styles.emptyState}>paste anything to start this patch</div>
+                <div className={styles.emptyState}>
+                  paste anything to start this patch
+                </div>
               )}
 
-              {/* margiela-style blank numbered tag, corner-tacked */}
-              <div
+              {/* a patch, literally — no text, just fabric and stitching */}
+              <svg
+                width="64"
+                height="44"
+                viewBox="0 0 64 44"
                 style={{
                   position: "absolute",
                   bottom: 16,
                   right: 16,
-                  width: 74,
-                  padding: "6px 8px",
-                  background: "rgba(255,255,255,0.9)",
-                  border: `1px solid ${INK}`,
                   pointerEvents: "none",
                   userSelect: "none",
                 }}
               >
-                {["-6px,-6px", "calc(100% - 2px),-6px", "-6px,calc(100% - 2px)", "calc(100% - 2px),calc(100% - 2px)"].map((pos, i) => {
-                  const [x, y] = pos.split(",");
-                  return (
-                    <svg key={i} width="8" height="8" style={{ position: "absolute", left: x, top: y }}>
-                      <path d="M0,4 L8,4 M4,0 L4,8" stroke={INK} strokeWidth="1" />
-                    </svg>
-                  );
-                })}
-                <div className="fg-brand" style={{ fontSize: 11, color: INK, letterSpacing: "0.08em" }}>
-                  4Q·71X
-                </div>
-                <div style={{ fontSize: 9, color: INK, opacity: 0.6, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>
-                  CACHE
-                </div>
-              </div>
+                {/* raw fabric edge */}
+                <rect
+                  x="1"
+                  y="1"
+                  width="62"
+                  height="42"
+                  rx="3"
+                  fill="#d9cfb0"
+                  stroke={INK}
+                  strokeWidth="1"
+                />
+                {/* running stitch attaching it to the board */}
+                <rect
+                  x="7"
+                  y="7"
+                  width="50"
+                  height="30"
+                  rx="2"
+                  fill="none"
+                  stroke={INK}
+                  strokeWidth="1.2"
+                  strokeDasharray="2 3"
+                  strokeLinecap="round"
+                  opacity="0.6"
+                />
+                {/* corner tack stitches */}
+                {[
+                  [4, 4],
+                  [60, 4],
+                  [4, 40],
+                  [60, 40],
+                ].map(([cx, cy], i) => (
+                  <path
+                    key={i}
+                    d={`M${cx - 3},${cy} L${cx + 3},${cy} M${cx},${cy - 3} L${cx},${cy + 3}`}
+                    stroke={INK}
+                    strokeWidth="1"
+                  />
+                ))}
+              </svg>
 
               {/* HUD readout, opposite corner */}
               <div
@@ -1098,7 +1276,8 @@ export default function CacheBoard() {
                   fontFamily: "var(--font-mono)",
                 }}
               >
-                {BOARD_W}×{BOARD_H} / {String(elements.length).padStart(3, "0")} ITEMS
+                {BOARD_W}×{BOARD_H} / {String(elements.length).padStart(3, "0")}{" "}
+                ITEMS
               </div>
 
               {elements
@@ -1120,19 +1299,46 @@ export default function CacheBoard() {
                       cursor: "grab",
                       touchAction: "none",
                       borderRadius: el.radius || 0,
-                      background: el.type === "color" ? el.bg : el.type === "text" ? el.bg : "transparent",
+                      background:
+                        el.type === "color"
+                          ? el.bg
+                          : el.type === "text"
+                            ? el.bg
+                            : "transparent",
                     }}
                   >
-                    <div style={{ position: "absolute", inset: 0, borderRadius: "inherit", overflow: "hidden" }}>
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        borderRadius: "inherit",
+                        overflow: "hidden",
+                      }}
+                    >
                       {el.type === "image" && (
-                        <img src={el.src} alt="" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }} />
+                        <img
+                          src={el.src}
+                          alt=""
+                          draggable={false}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            pointerEvents: "none",
+                          }}
+                        />
                       )}
                       {el.type === "text" && (
                         <div
                           contentEditable={editingId === el.id}
                           suppressContentEditableWarning
                           ref={(node) => {
-                            if (node && editingId === el.id && document.activeElement !== node) node.focus();
+                            if (
+                              node &&
+                              editingId === el.id &&
+                              document.activeElement !== node
+                            )
+                              node.focus();
                           }}
                           onDoubleClick={(e) => {
                             e.stopPropagation();
@@ -1142,7 +1348,9 @@ export default function CacheBoard() {
                             if (editingId === el.id) e.stopPropagation();
                           }}
                           onBlur={(e) => {
-                            updateElement(el.id, { text: e.currentTarget.textContent });
+                            updateElement(el.id, {
+                              text: e.currentTarget.textContent,
+                            });
                             setEditingId(null);
                           }}
                           style={{
@@ -1164,24 +1372,42 @@ export default function CacheBoard() {
                       {el.type === "link" && (
                         <div className={styles.linkCard}>
                           {el.image ? (
-                            <div className={styles.linkCardImage} style={{ backgroundImage: `url(${el.image})` }} />
+                            <div
+                              className={styles.linkCardImage}
+                              style={{ backgroundImage: `url(${el.image})` }}
+                            />
                           ) : (
-                            <div className={styles.linkCardImage} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <div
+                              className={styles.linkCardImage}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
                               <Link2 size={24} style={{ opacity: 0.3 }} />
                             </div>
                           )}
                           <div className={styles.linkCardBody}>
-                            <div className={styles.linkCardTitle}>{el.title}</div>
-                            <div className={styles.linkCardDomain}>{el.domain}</div>
+                            <div className={styles.linkCardTitle}>
+                              {el.title}
+                            </div>
+                            <div className={styles.linkCardDomain}>
+                              {el.domain}
+                            </div>
                           </div>
                         </div>
                       )}
                       {el.type === "file" && (
                         <div className={styles.fileCard}>
-                          <FileText size={28} style={{ color: INK, opacity: 0.6 }} />
+                          <FileText
+                            size={28}
+                            style={{ color: INK, opacity: 0.6 }}
+                          />
                           <div className={styles.fileCardName}>{el.name}</div>
                           <div className={styles.fileCardMeta}>
-                            {(el.fileType || "file").split("/").pop()} · {Math.round((el.size || 0) / 1024)}kb
+                            {(el.fileType || "file").split("/").pop()} ·{" "}
+                            {Math.round((el.size || 0) / 1024)}kb
                           </div>
                         </div>
                       )}
@@ -1193,7 +1419,8 @@ export default function CacheBoard() {
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
                           e.stopPropagation();
-                          const target = el.type === "link" ? el.url : el.dataUrl;
+                          const target =
+                            el.type === "link" ? el.url : el.dataUrl;
                           window.open(target, "_blank", "noopener,noreferrer");
                         }}
                         title={el.type === "link" ? "open link" : "open file"}
@@ -1228,7 +1455,9 @@ export default function CacheBoard() {
         {!isMobile && (
           <div className={styles.panel}>
             {!selected ? (
-              <p className={styles.panelEmpty}>select a piece in this patch to style it</p>
+              <p className={styles.panelEmpty}>
+                select a piece in this patch to style it
+              </p>
             ) : (
               <StylePanelContent
                 selected={selected}
@@ -1247,16 +1476,32 @@ export default function CacheBoard() {
             )}
             <div className={styles.panelFooter}>
               <p className={styles.panelFooterText}>
-                paste images/text anywhere in the patch, drag the corner dot to resize, double-click text to edit.
-                "share link" packs the patch into the URL itself so this works with no backend; swap in a short
-                patch id cached to a database for real persistence across devices, with the same no-account-required flow.
+                paste images/text anywhere in the patch, drag the corner dot to
+                resize, double-click text to edit. "share link" packs the patch
+                into the URL itself so this works with no backend; swap in a
+                short patch id cached to a database for real persistence across
+                devices, with the same no-account-required flow.
+              </p>
+              <p className={styles.panelFooterText} style={{ marginTop: 10 }}>
+                <a
+                  href="/case-study"
+                  style={{ color: "inherit", textDecoration: "underline" }}
+                >
+                  how this was built ↗
+                </a>
               </p>
             </div>
           </div>
         )}
 
         {isMobile && selected && (
-          <div className={styles.mobileSheet} style={{ maxHeight: "55vh", boxShadow: "0 -4px 20px rgba(0,0,0,0.4)" }}>
+          <div
+            className={styles.mobileSheet}
+            style={{
+              maxHeight: "55vh",
+              boxShadow: "0 -4px 20px rgba(0,0,0,0.4)",
+            }}
+          >
             <StylePanelContent
               selected={selected}
               isMobile={isMobile}
@@ -1289,12 +1534,42 @@ function CornerBrackets({ el }) {
     <svg
       width={w + m * 2}
       height={h + m * 2}
-      style={{ position: "absolute", left: -m, top: -m, pointerEvents: "none", overflow: "visible" }}
+      style={{
+        position: "absolute",
+        left: -m,
+        top: -m,
+        pointerEvents: "none",
+        overflow: "visible",
+      }}
     >
-      <path d={`M ${0} ${len} L ${0} ${0} L ${len} ${0}`} fill="none" stroke={LAVENDER} strokeWidth={2} strokeLinecap="square" />
-      <path d={`M ${w + m * 2 - len} ${0} L ${w + m * 2} ${0} L ${w + m * 2} ${len}`} fill="none" stroke={LAVENDER} strokeWidth={2} strokeLinecap="square" />
-      <path d={`M ${0} ${h + m * 2 - len} L ${0} ${h + m * 2} L ${len} ${h + m * 2}`} fill="none" stroke={LAVENDER} strokeWidth={2} strokeLinecap="square" />
-      <path d={`M ${w + m * 2 - len} ${h + m * 2} L ${w + m * 2} ${h + m * 2} L ${w + m * 2} ${h + m * 2 - len}`} fill="none" stroke={LAVENDER} strokeWidth={2} strokeLinecap="square" />
+      <path
+        d={`M ${0} ${len} L ${0} ${0} L ${len} ${0}`}
+        fill="none"
+        stroke={LAVENDER}
+        strokeWidth={2}
+        strokeLinecap="square"
+      />
+      <path
+        d={`M ${w + m * 2 - len} ${0} L ${w + m * 2} ${0} L ${w + m * 2} ${len}`}
+        fill="none"
+        stroke={LAVENDER}
+        strokeWidth={2}
+        strokeLinecap="square"
+      />
+      <path
+        d={`M ${0} ${h + m * 2 - len} L ${0} ${h + m * 2} L ${len} ${h + m * 2}`}
+        fill="none"
+        stroke={LAVENDER}
+        strokeWidth={2}
+        strokeLinecap="square"
+      />
+      <path
+        d={`M ${w + m * 2 - len} ${h + m * 2} L ${w + m * 2} ${h + m * 2} L ${w + m * 2} ${h + m * 2 - len}`}
+        fill="none"
+        stroke={LAVENDER}
+        strokeWidth={2}
+        strokeLinecap="square"
+      />
     </svg>
   );
 }
@@ -1321,11 +1596,17 @@ function StylePanelContent({
       <div className={styles.panelHeader}>
         <span className={styles.typeLabel}>{selected.type}</span>
         <div className={styles.iconRow}>
-          <button onClick={() => deleteElement(selected.id)} className={styles.iconBtn}>
+          <button
+            onClick={() => deleteElement(selected.id)}
+            className={styles.iconBtn}
+          >
             <Trash2 size={16} />
           </button>
           {isMobile && (
-            <button onClick={() => setSelectedId(null)} className={styles.iconBtnPlain}>
+            <button
+              onClick={() => setSelectedId(null)}
+              className={styles.iconBtnPlain}
+            >
               <X size={18} />
             </button>
           )}
@@ -1339,11 +1620,19 @@ function StylePanelContent({
             <span className={styles.processingLabel}>removing background…</span>
           ) : (
             <div className={styles.frontBackRow} style={{ marginTop: 4 }}>
-              <button onClick={() => removeImageBackground(selected.id)} className={styles.smallBtn} style={{ marginTop: 0 }}>
+              <button
+                onClick={() => removeImageBackground(selected.id)}
+                className={styles.smallBtn}
+                style={{ marginTop: 0 }}
+              >
                 remove background
               </button>
               {selected.originalSrc && (
-                <button onClick={() => restoreImageBackground(selected.id)} className={styles.smallBtn} style={{ marginTop: 0 }}>
+                <button
+                  onClick={() => restoreImageBackground(selected.id)}
+                  className={styles.smallBtn}
+                  style={{ marginTop: 0 }}
+                >
                   restore original
                 </button>
               )}
@@ -1373,29 +1662,39 @@ function StylePanelContent({
           <label className={styles.field}>
             text color
             <input
-            onPointerDown={onAdjustStart}
+              onPointerDown={onAdjustStart}
               type="color"
               value={selected.textColor || INK}
-              onChange={(e) => updateElement(selected.id, { textColor: e.target.value })}
+              onChange={(e) =>
+                updateElement(selected.id, { textColor: e.target.value })
+              }
               className={styles.colorInputSm}
             />
           </label>
           <label className={styles.field}>
             font size — {selected.fontSize || 16}px
             <input
-            onPointerDown={onAdjustStart}
+              onPointerDown={onAdjustStart}
               type="range"
               min="10"
               max="48"
               value={selected.fontSize || 16}
-              onChange={(e) => updateElement(selected.id, { fontSize: Number(e.target.value) })}
+              onChange={(e) =>
+                updateElement(selected.id, { fontSize: Number(e.target.value) })
+              }
             />
           </label>
           <button
-            onClick={() => updateElement(selected.id, { bg: selected.bg === "transparent" ? "#ffffff" : "transparent" })}
+            onClick={() =>
+              updateElement(selected.id, {
+                bg: selected.bg === "transparent" ? "#ffffff" : "transparent",
+              })
+            }
             className={styles.smallBtn}
           >
-            {selected.bg === "transparent" ? "add background" : "make transparent"}
+            {selected.bg === "transparent"
+              ? "add background"
+              : "make transparent"}
           </button>
         </>
       )}
@@ -1403,44 +1702,58 @@ function StylePanelContent({
       <label className={styles.field}>
         corner radius — {selected.radius ?? 0}px
         <input
-            onPointerDown={onAdjustStart}
+          onPointerDown={onAdjustStart}
           type="range"
           min="0"
           max="80"
           value={selected.radius ?? 0}
-          onChange={(e) => updateElement(selected.id, { radius: Number(e.target.value) })}
+          onChange={(e) =>
+            updateElement(selected.id, { radius: Number(e.target.value) })
+          }
         />
       </label>
 
       <label className={styles.field}>
         rotation — {selected.rotation ?? 0}°
         <input
-            onPointerDown={onAdjustStart}
+          onPointerDown={onAdjustStart}
           type="range"
           min="-45"
           max="45"
           value={selected.rotation ?? 0}
-          onChange={(e) => updateElement(selected.id, { rotation: Number(e.target.value) })}
+          onChange={(e) =>
+            updateElement(selected.id, { rotation: Number(e.target.value) })
+          }
         />
       </label>
 
       <label className={styles.field}>
         opacity — {Math.round((selected.opacity ?? 1) * 100)}%
         <input
-            onPointerDown={onAdjustStart}
+          onPointerDown={onAdjustStart}
           type="range"
           min="10"
           max="100"
           value={Math.round((selected.opacity ?? 1) * 100)}
-          onChange={(e) => updateElement(selected.id, { opacity: Number(e.target.value) / 100 })}
+          onChange={(e) =>
+            updateElement(selected.id, {
+              opacity: Number(e.target.value) / 100,
+            })
+          }
         />
       </label>
 
       <div className={styles.frontBackRow}>
-        <button onClick={() => bringToFront(selected.id)} className={styles.frontBackBtn}>
+        <button
+          onClick={() => bringToFront(selected.id)}
+          className={styles.frontBackBtn}
+        >
           <ChevronUp size={13} /> front
         </button>
-        <button onClick={() => sendToBack(selected.id)} className={styles.frontBackBtn}>
+        <button
+          onClick={() => sendToBack(selected.id)}
+          className={styles.frontBackBtn}
+        >
           <ChevronDown size={13} /> back
         </button>
       </div>

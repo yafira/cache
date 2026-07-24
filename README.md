@@ -24,11 +24,11 @@ then open http://localhost:3000
 Every tool in this space names its unit of work differently — Figma has files, Are.na has
 channels, Notion has pages, Cosmos has clusters. Cache's naming:
 
-| generic term | cache's word |
-| --- | --- |
-| board / canvas | **patch** |
-| folder (a group of patches) | **stash** |
-| saved / saved to database | **cached** |
+| generic term                | cache's word |
+| --------------------------- | ------------ |
+| board / canvas              | **patch**    |
+| folder (a group of patches) | **stash**    |
+| saved / saved to database   | **cached**   |
 
 A patch is the single infinite canvas — what `CacheBoard.jsx` renders. A stash is the
 organizational layer above it (a folder of patches) — not built in this starter; see the
@@ -57,8 +57,9 @@ existing style panel on top of tldraw's shape/selection events instead of hand-r
 resize math (which is what `CacheBoard.jsx` currently does, for a dependency-free demo).
 
 **Database:** Supabase (Postgres + Storage) — bundles DB, file storage, and auth in one project,
-which matters most for shipping v1 solo. It's vanilla Postgres underneath, so nothing's locked in
-if this needs to move to Neon + Drizzle later for more schema control.
+which matters most for shipping v1 fast without wiring together three separate services. It's vanilla
+Postgres underneath, so nothing's locked in if this needs to move to Neon + Drizzle later for more
+schema control.
 
 **Storage:** Supabase Storage (S3-compatible underneath; Cloudflare R2 is the fallback if storage
 needs move off Supabase specifically)
@@ -74,6 +75,16 @@ the browser with zero backend), and fall back to server-side `og:image` / `og:ti
 anything else. Instagram is worth flagging now: their thumbnails are locked down without official
 API access/business verification, so plan for a plain link card there rather than promising a
 thumbnail.
+
+## case study
+
+`/case-study` is a full write-up of the build — the problem framing, the competitive landscape, the
+naming decisions (patches/stashes/cached), the visual direction's actual evolution (including the two
+passes that got rejected before the current one), three real bugs with root causes, and the AGPL catch.
+Reuses the exact same design tokens and signature motifs (the corner tag, the bracket selection marks)
+as the tool itself, so the write-up and the product read as one coherent thing rather than a separate
+marketing page bolted on afterward. Two spots are marked as screenshot placeholders — drop in real
+captures of the running app once it's deployed.
 
 ## known limits of this starter (the real v2 list)
 
