@@ -1,0 +1,309 @@
+.page {
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(236, 231, 219, 0.15);
+  background: #1c1b19;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.brand {
+  font-size: 18px;
+  color: #ece7db;
+  margin-right: 8px;
+  letter-spacing: 0.1em;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 8px 12px;
+  border: 1px solid rgba(236, 231, 219, 0.3);
+  color: rgba(236, 231, 219, 0.85);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.btn:hover {
+  background: #ece7db;
+  color: #1c1b19;
+}
+
+.btnPrimary {
+  color: #1c1b19;
+  font-weight: 600;
+}
+.btnPrimary:hover {
+  filter: brightness(1.05);
+}
+
+.swatchGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid rgba(236, 231, 219, 0.3);
+}
+
+.swatchIcon {
+  color: rgba(236, 231, 219, 0.6);
+}
+
+.swatchDot {
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(236, 231, 219, 0.4);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  padding: 0;
+}
+.swatchDot:active {
+  transform: scale(0.9);
+}
+
+.patchPicker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid rgba(236, 231, 219, 0.3);
+}
+
+.patchLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(236, 231, 219, 0.5);
+}
+
+.colorInput {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(236, 231, 219, 0.4);
+  cursor: pointer;
+  background: transparent;
+  padding: 0;
+}
+
+.colorInputSm {
+  width: 100%;
+  height: 32px;
+  border: 1px solid rgba(236, 231, 219, 0.3);
+  cursor: pointer;
+  background: transparent;
+  padding: 0;
+}
+
+.toolbarEnd {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copyStatus {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(236, 231, 219, 0.5);
+}
+
+.hideOnMobile {
+  display: none;
+}
+@media (min-width: 640px) {
+  .hideOnMobile {
+    display: inline;
+  }
+}
+
+.hideBelowMd {
+  display: none;
+}
+@media (min-width: 768px) {
+  .hideBelowMd {
+    display: inline;
+  }
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.boardWrap {
+  flex: 1;
+  overflow: auto;
+  padding: 8px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+@media (min-width: 640px) {
+  .boardWrap {
+    padding: 32px;
+  }
+}
+
+.emptyState {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(13, 13, 12, 0.35);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  text-align: center;
+  padding: 0 32px;
+}
+
+.panel {
+  width: 256px;
+  border-left: 1px solid rgba(236, 231, 219, 0.15);
+  background: #1c1b19;
+  padding: 16px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.panelEmpty {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(236, 231, 219, 0.4);
+}
+
+.panelFooter {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(236, 231, 219, 0.15);
+}
+
+.panelFooterText {
+  font-size: 10px;
+  color: rgba(236, 231, 219, 0.35);
+  line-height: 1.6;
+}
+
+.mobileSheet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #1c1b19;
+  border-top: 1px solid rgba(236, 231, 219, 0.2);
+  padding: 16px;
+  overflow-y: auto;
+  z-index: 30;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.typeLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(236, 231, 219, 0.5);
+}
+
+.iconRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.iconBtn {
+  color: rgba(236, 231, 219, 0.5);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+}
+.iconBtn:hover {
+  color: #f0bfd0;
+}
+
+.iconBtnPlain {
+  color: rgba(236, 231, 219, 0.5);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(236, 231, 219, 0.6);
+  margin-top: 16px;
+}
+
+.smallBtn {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 8px;
+  border: 1px solid rgba(236, 231, 219, 0.3);
+  color: rgba(236, 231, 219, 0.8);
+  background: none;
+  cursor: pointer;
+  margin-top: 12px;
+}
+.smallBtn:hover {
+  border-color: #ece7db;
+}
+
+.frontBackRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.frontBackBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 8px;
+  border: 1px solid rgba(236, 231, 219, 0.3);
+  color: rgba(236, 231, 219, 0.8);
+  background: none;
+  cursor: pointer;
+}
+.frontBackBtn:hover {
+  border-color: #ece7db;
+}

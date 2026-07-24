@@ -1,17 +1,30 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Type, Square, Image as ImageIcon, Download, Link2, Trash2, ChevronUp, ChevronDown, X } from "lucide-react";
+import { Type, Square, Image as ImageIcon, Download, Link2, Trash2, ChevronUp, ChevronDown, X, Undo2 } from "lucide-react";
+import styles from "./CacheBoard.module.css";
 
 // ---- constants ----
 const BOARD_W = 1400;
 const BOARD_H = 900;
 const MOBILE_BREAKPOINT = 768;
+
+// monochrome chrome + three pastel accents, each doing exactly one job —
+// lavender marks selection, butter marks the primary action, pink marks resize
+const INK = "#0d0d0c";
+const BONE = "#e7e2d6";
+const CONCRETE = "#8f8b81";
+const GRAPHITE = "#1c1b19";
+const BONE_TEXT = "#ece7db";
+const LAVENDER = "#c9bce0";
+const BUTTER = "#f2d675";
+const PINK = "#f0bfd0";
+
 const SWATCHES = [
-  { name: "blush", hex: "#f3d6d9" },
-  { name: "matcha", hex: "#c9d6ab" },
-  { name: "wisteria", hex: "#cdc0e0" },
-  { name: "butter", hex: "#f6e6a8" },
+  { name: "bone", hex: BONE },
+  { name: "lavender", hex: LAVENDER },
+  { name: "butter", hex: BUTTER },
+  { name: "pink", hex: PINK },
 ];
 
 let idCounter = 1;
@@ -29,7 +42,7 @@ function loadImage(src) {
 export default function CacheBoard() {
   const [elements, setElements] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
-  const [canvasBg, setCanvasBg] = useState("#faf6ee");
+  const [canvasBg, setCanvasBg] = useState(BONE);
   const [copyStatus, setCopyStatus] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [scale, setScale] = useState(1);
@@ -39,7 +52,32 @@ export default function CacheBoard() {
   const resizeRef = useRef(null);
   const fileInputRef = useRef(null);
   const zCounter = useRef(1);
+  const placeCounter = useRef(0);
+  const historyRef = useRef([]);
 
+  // each new piece lands a bit further along a diagonal cascade instead of
+  // dead-center every time, so repeated pastes don't stack exactly on top of
+  // each other
+  const nextOffset = () => {
+    placeCounter.current += 1;
+    const step = placeCounter.current % 10;
+    return { dx: step * 26, dy: step * 20 };
+  };
+
+  const pushHistory = (snapshot) => {
+    historyRef.current.push(snapshot);
+    if (historyRef.current.length > 50) historyRef.current.shift();
+  };
+
+  const undo = () => {
+    const prev = historyRef.current.pop();
+    if (prev) {
+      setElements(prev);
+      setSelectedId(null);
+    }
+  };
+
+  const [editingId, setEditingId] = useState(null);
   const selected = elements.find((e) => e.id === selectedId) || null;
 
   // ---- responsive: track viewport and compute a fit-to-width scale for the board ----
@@ -66,7 +104,7 @@ export default function CacheBoard() {
         const decoded = JSON.parse(decodeURIComponent(atob(hash.slice(7))));
         if (decoded?.elements) {
           setElements(decoded.elements);
-          setCanvasBg(decoded.canvasBg || "#faf6ee");
+          setCanvasBg(decoded.canvasBg || BONE);
           const maxZ = Math.max(1, ...decoded.elements.map((e) => e.zIndex || 1));
           zCounter.current = maxZ + 1;
           idCounter = decoded.elements.length + 1;
@@ -79,37 +117,45 @@ export default function CacheBoard() {
 
   const addElement = useCallback((el) => {
     zCounter.current += 1;
-    const full = { rotation: 0, opacity: 1, radius: 12, zIndex: zCounter.current, ...el };
-    setElements((prev) => [...prev, full]);
+    const full = { rotation: 0, opacity: 1, radius: 0, zIndex: zCounter.current, ...el };
+    setElements((prev) => {
+      pushHistory(prev);
+      return [...prev, full];
+    });
     setSelectedId(full.id);
   }, []);
 
-  const addText = () =>
+  const addText = () => {
+    const { dx, dy } = nextOffset();
     addElement({
       id: newId(),
       type: "text",
-      x: BOARD_W / 2 - 110,
-      y: BOARD_H / 2 - 50,
+      x: BOARD_W / 2 - 110 + dx,
+      y: BOARD_H / 2 - 50 + dy,
       w: 220,
       h: 100,
       text: "double-tap to edit",
       fontSize: 18,
-      textColor: "#2b2620",
+      textColor: INK,
       bg: "transparent",
     });
+  };
 
-  const addColorBlock = (hex) =>
+  const addColorBlock = (hex) => {
+    const { dx, dy } = nextOffset();
     addElement({
       id: newId(),
       type: "color",
-      x: BOARD_W / 2 - 100 + Math.random() * 40,
-      y: BOARD_H / 2 - 80 + Math.random() * 40,
+      x: BOARD_W / 2 - 100 + dx,
+      y: BOARD_H / 2 - 80 + dy,
       w: 200,
       h: 160,
-      bg: hex || "#c9d6ab",
+      bg: hex || CONCRETE,
     });
+  };
 
   const handleFiles = (files) => {
+    const { dx, dy } = nextOffset();
     Array.from(files).forEach((file, i) => {
       if (!file.type.startsWith("image/")) return;
       const reader = new FileReader();
@@ -123,11 +169,11 @@ export default function CacheBoard() {
             id: newId(),
             type: "image",
             src,
-            x: BOARD_W / 2 - 130 + i * 20,
-            y: BOARD_H / 2 - targetH / 2 + i * 20,
+            x: BOARD_W / 2 - 130 + dx + i * 24,
+            y: BOARD_H / 2 - targetH / 2 + dy + i * 24,
             w: targetW,
             h: targetH,
-            radius: 12,
+            radius: 0,
           });
         };
         img.src = src;
@@ -154,16 +200,17 @@ export default function CacheBoard() {
       if (!handledImage) {
         const text = e.clipboardData.getData("text/plain");
         if (text && text.trim()) {
+          const { dx, dy } = nextOffset();
           addElement({
             id: newId(),
             type: "text",
-            x: BOARD_W / 2 - 110 + Math.random() * 40,
-            y: BOARD_H / 2 - 50 + Math.random() * 40,
+            x: BOARD_W / 2 - 110 + dx,
+            y: BOARD_H / 2 - 50 + dy,
             w: 240,
             h: 110,
             text: text.trim().slice(0, 400),
             fontSize: 16,
-            textColor: "#2b2620",
+            textColor: INK,
             bg: "#ffffff",
           });
         }
@@ -178,7 +225,10 @@ export default function CacheBoard() {
     setElements((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
 
   const deleteElement = (id) => {
-    setElements((prev) => prev.filter((e) => e.id !== id));
+    setElements((prev) => {
+      pushHistory(prev);
+      return prev.filter((e) => e.id !== id);
+    });
     setSelectedId(null);
   };
 
@@ -191,6 +241,7 @@ export default function CacheBoard() {
   // ---- drag (pointer events cover touch + mouse; divide by scale so screen px map to board px) ----
   const onPointerDownElement = (e, el) => {
     e.stopPropagation();
+    pushHistory(elements);
     setSelectedId(el.id);
     dragRef.current = {
       id: el.id,
@@ -218,6 +269,7 @@ export default function CacheBoard() {
   // ---- resize ----
   const onPointerDownResize = (e, el) => {
     e.stopPropagation();
+    pushHistory(elements);
     resizeRef.current = {
       id: el.id,
       startX: e.clientX,
@@ -282,7 +334,7 @@ export default function CacheBoard() {
           roundRectPath(ctx, 0, 0, el.w, el.h, el.radius || 0);
           ctx.fill();
         }
-        ctx.fillStyle = el.textColor || "#2b2620";
+        ctx.fillStyle = el.textColor || INK;
         ctx.font = `${el.fontSize || 16}px ui-monospace, monospace`;
         ctx.textBaseline = "top";
         wrapText(ctx, el.text || "", 14, 14, el.w - 28, (el.fontSize || 16) * 1.35);
@@ -315,169 +367,65 @@ export default function CacheBoard() {
     setTimeout(() => setCopyStatus(""), 2000);
   };
 
-  const StitchSelection = ({ el }) => {
-    const r = Math.min(el.radius || 0, el.w / 2, el.h / 2);
-    return (
-      <svg
-        width={el.w + 12}
-        height={el.h + 12}
-        style={{ position: "absolute", left: -6, top: -6, pointerEvents: "none", overflow: "visible" }}
-      >
-        <rect
-          x={1}
-          y={1}
-          width={el.w + 10}
-          height={el.h + 10}
-          rx={r + 6}
-          fill="none"
-          stroke="#2b2620"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-          strokeDasharray="1 9"
-        />
-      </svg>
-    );
-  };
+  // ---- keyboard shortcuts: delete/backspace removes the selected piece, cmd/ctrl+z undoes ----
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      const active = document.activeElement;
+      const isTypingSomewhere =
+        active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable);
 
-  const StylePanelContent = () => (
-    <>
-      <div className="flex items-center justify-between">
-        <span className="text-xs uppercase tracking-wide text-[#2b2620]/60">{selected.type}</span>
-        <div className="flex items-center gap-3">
-          <button onClick={() => deleteElement(selected.id)} className="text-[#2b2620]/50 hover:text-red-600">
-            <Trash2 size={16} />
-          </button>
-          {isMobile && (
-            <button onClick={() => setSelectedId(null)} className="text-[#2b2620]/50">
-              <X size={18} />
-            </button>
-          )}
-        </div>
-      </div>
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedId && !isTypingSomewhere) {
+        e.preventDefault();
+        deleteElement(selectedId);
+        return;
+      }
 
-      {(selected.type === "color" || selected.type === "text") && (
-        <label className="flex flex-col gap-1 text-xs text-[#2b2620]/70 mt-3">
-          {selected.type === "color" ? "fill" : "background"}
-          <input
-            type="color"
-            value={selected.bg === "transparent" ? "#ffffff" : selected.bg}
-            onChange={(e) => updateElement(selected.id, { bg: e.target.value })}
-            className="w-full h-8 rounded border border-[#2b2620]/30 cursor-pointer"
-          />
-        </label>
-      )}
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z" && !isTypingSomewhere) {
+        e.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedId]);
 
-      {selected.type === "text" && (
-        <>
-          <label className="flex flex-col gap-1 text-xs text-[#2b2620]/70 mt-3">
-            text color
-            <input
-              type="color"
-              value={selected.textColor || "#2b2620"}
-              onChange={(e) => updateElement(selected.id, { textColor: e.target.value })}
-              className="w-full h-8 rounded border border-[#2b2620]/30 cursor-pointer"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-[#2b2620]/70 mt-3">
-            font size {selected.fontSize || 16}px
-            <input
-              type="range"
-              min="10"
-              max="48"
-              value={selected.fontSize || 16}
-              onChange={(e) => updateElement(selected.id, { fontSize: Number(e.target.value) })}
-            />
-          </label>
-          <button
-            onClick={() => updateElement(selected.id, { bg: selected.bg === "transparent" ? "#ffffff" : "transparent" })}
-            className="text-xs px-2 py-1 rounded border border-[#2b2620]/30 hover:bg-[#f3d6d9] mt-2"
-          >
-            {selected.bg === "transparent" ? "add background" : "make transparent"}
-          </button>
-        </>
-      )}
-
-      <label className="flex flex-col gap-1 text-xs text-[#2b2620]/70 mt-3">
-        corner radius {selected.radius ?? 0}px
-        <input
-          type="range"
-          min="0"
-          max="80"
-          value={selected.radius ?? 0}
-          onChange={(e) => updateElement(selected.id, { radius: Number(e.target.value) })}
-        />
-      </label>
-
-      <label className="flex flex-col gap-1 text-xs text-[#2b2620]/70 mt-3">
-        rotation {selected.rotation ?? 0}°
-        <input
-          type="range"
-          min="-45"
-          max="45"
-          value={selected.rotation ?? 0}
-          onChange={(e) => updateElement(selected.id, { rotation: Number(e.target.value) })}
-        />
-      </label>
-
-      <label className="flex flex-col gap-1 text-xs text-[#2b2620]/70 mt-3">
-        opacity {Math.round((selected.opacity ?? 1) * 100)}%
-        <input
-          type="range"
-          min="10"
-          max="100"
-          value={Math.round((selected.opacity ?? 1) * 100)}
-          onChange={(e) => updateElement(selected.id, { opacity: Number(e.target.value) / 100 })}
-        />
-      </label>
-
-      <div className="flex gap-2 mt-3">
-        <button onClick={() => bringToFront(selected.id)} className="flex-1 flex items-center justify-center gap-1 text-xs px-2 py-2 rounded border border-[#2b2620]/30 hover:bg-[#c9d6ab]">
-          <ChevronUp size={14} /> front
-        </button>
-        <button onClick={() => sendToBack(selected.id)} className="flex-1 flex items-center justify-center gap-1 text-xs px-2 py-2 rounded border border-[#2b2620]/30 hover:bg-[#cdc0e0]">
-          <ChevronDown size={14} /> back
-        </button>
-      </div>
-    </>
-  );
+  // viewfinder-bracket selection indicator and style panel now live outside
+  // this component (see below) so their identity is stable across renders —
+  // sliders and inputs no longer remount on every drag tick.
 
   return (
     <div
       style={{
-        backgroundColor: "#efe9dd",
+        backgroundColor: GRAPHITE,
         backgroundImage:
-          "radial-gradient(rgba(43,38,32,0.05) 1px, transparent 1px), radial-gradient(rgba(43,38,32,0.035) 1px, transparent 1px)",
-        backgroundSize: "3px 3px, 7px 7px",
-        backgroundPosition: "0 0, 3.5px 3.5px",
+          "linear-gradient(rgba(236,231,219,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(236,231,219,0.045) 1px, transparent 1px)",
+        backgroundSize: "32px 32px, 32px 32px",
       }}
-      className="w-full h-full min-h-screen flex flex-col"
+      className={styles.page}
     >
       {/* toolbar */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-dashed border-[#2b2620]/30 bg-[#faf6ee] flex-wrap sticky top-0 z-20">
-        <span className="fg-brand text-base tracking-wide text-[#2b2620] font-bold mr-1">cache</span>
+      <div className={styles.toolbar}>
+        <span className={`fg-brand ${styles.brand}`}>CACHE</span>
 
-        <button onClick={addText} className="flex items-center gap-1 text-xs px-2.5 py-2 rounded-full border border-[#2b2620]/40 hover:bg-[#f3d6d9] transition-colors">
-          <Type size={14} /> <span className="hidden sm:inline">text</span>
+        <button onClick={addText} className={styles.btn}>
+          <Type size={13} /> <span className={styles.hideOnMobile}>text</span>
         </button>
 
-        <div className="flex items-center gap-1 px-2 py-1 rounded-full border border-[#2b2620]/40">
-          <Square size={14} />
+        <div className={styles.swatchGroup}>
+          <Square size={13} className={styles.swatchIcon} />
           {SWATCHES.map((s) => (
             <button
               key={s.hex}
               title={s.name}
               onClick={() => addColorBlock(s.hex)}
               style={{ background: s.hex }}
-              className="w-5 h-5 rounded-full border border-[#2b2620]/30 active:scale-95 transition-transform"
+              className={styles.swatchDot}
             />
           ))}
         </div>
 
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-1 text-xs px-2.5 py-2 rounded-full border border-[#2b2620]/40 hover:bg-[#c9d6ab] transition-colors"
-        >
-          <ImageIcon size={14} /> <span className="hidden sm:inline">image</span>
+        <button onClick={() => fileInputRef.current?.click()} className={styles.btn}>
+          <ImageIcon size={13} /> <span className={styles.hideOnMobile}>image</span>
         </button>
         <input
           ref={fileInputRef}
@@ -488,30 +436,37 @@ export default function CacheBoard() {
           onChange={(e) => e.target.files && handleFiles(e.target.files)}
         />
 
-        <div className="flex items-center gap-1">
-          <span className="text-[10px] uppercase text-[#2b2620]/60 hidden sm:inline">patch</span>
+        <div className={styles.patchPicker}>
+          <span className={`${styles.patchLabel} ${styles.hideOnMobile}`}>patch</span>
           <input
             type="color"
             value={canvasBg}
             onChange={(e) => setCanvasBg(e.target.value)}
-            className="w-6 h-6 rounded-full border border-[#2b2620]/40 cursor-pointer"
+            className={styles.colorInput}
           />
         </div>
 
-        <div className="ml-auto flex items-center gap-1.5">
-          {copyStatus && <span className="text-[10px] text-[#2b2620]/60 hidden sm:inline">{copyStatus}</span>}
-          <button onClick={handleShare} className="flex items-center gap-1 text-xs px-2.5 py-2 rounded-full border border-[#2b2620]/40 hover:bg-[#cdc0e0] transition-colors">
-            <Link2 size={14} /> <span className="hidden md:inline">share</span>
+        <div className={styles.toolbarEnd}>
+          {copyStatus && <span className={`${styles.copyStatus} ${styles.hideOnMobile}`}>{copyStatus}</span>}
+          <button onClick={undo} className={styles.btn} title="undo (cmd/ctrl+z)">
+            <Undo2 size={13} /> <span className={styles.hideBelowMd}>undo</span>
           </button>
-          <button onClick={handleExport} className="flex items-center gap-1 text-xs px-2.5 py-2 rounded-full bg-[#2b2620] text-[#faf6ee] hover:opacity-80 transition-opacity">
-            <Download size={14} /> <span className="hidden md:inline">download</span>
+          <button onClick={handleShare} className={styles.btn}>
+            <Link2 size={13} /> <span className={styles.hideBelowMd}>share</span>
+          </button>
+          <button
+            onClick={handleExport}
+            style={{ borderColor: BUTTER, background: BUTTER, border: "1px solid " + BUTTER }}
+            className={`${styles.btn} ${styles.btnPrimary}`}
+          >
+            <Download size={13} /> <span className={styles.hideBelowMd}>download</span>
           </button>
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className={styles.body}>
         {/* board */}
-        <div ref={boardWrapRef} className="flex-1 overflow-auto p-2 sm:p-8 flex items-start justify-center">
+        <div ref={boardWrapRef} className={styles.boardWrap}>
           <div style={{ width: BOARD_W * scale, height: BOARD_H * scale, flexShrink: 0 }}>
             <div
               ref={boardRef}
@@ -521,9 +476,7 @@ export default function CacheBoard() {
                 height: BOARD_H,
                 background: canvasBg,
                 position: "relative",
-                borderRadius: 6,
-                boxShadow: "0 2px 24px rgba(43,38,32,0.18)",
-                border: "1px dashed rgba(43,38,32,0.35)",
+                boxShadow: "0 0 0 1px rgba(236,231,219,0.08), 0 12px 40px rgba(0,0,0,0.35)",
                 transform: `scale(${scale})`,
                 transformOrigin: "top left",
                 touchAction: "none",
@@ -531,25 +484,57 @@ export default function CacheBoard() {
               }}
             >
               {elements.length === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center text-[#2b2620]/40 text-sm text-center px-8">
-                  paste anything to start this patch, or use the toolbar above
-                </div>
+                <div className={styles.emptyState}>paste anything to start this patch</div>
               )}
+
+              {/* margiela-style blank numbered tag, corner-tacked */}
               <div
-                className="fg-brand"
                 style={{
                   position: "absolute",
-                  bottom: 14,
-                  right: 18,
-                  fontSize: 13,
-                  color: "rgba(43,38,32,0.25)",
-                  letterSpacing: "0.03em",
+                  bottom: 16,
+                  right: 16,
+                  width: 74,
+                  padding: "6px 8px",
+                  background: "rgba(255,255,255,0.9)",
+                  border: `1px solid ${INK}`,
                   pointerEvents: "none",
                   userSelect: "none",
                 }}
               >
-                cache
+                {["-6px,-6px", "calc(100% - 2px),-6px", "-6px,calc(100% - 2px)", "calc(100% - 2px),calc(100% - 2px)"].map((pos, i) => {
+                  const [x, y] = pos.split(",");
+                  return (
+                    <svg key={i} width="8" height="8" style={{ position: "absolute", left: x, top: y }}>
+                      <path d="M0,4 L8,4 M4,0 L4,8" stroke={INK} strokeWidth="1" />
+                    </svg>
+                  );
+                })}
+                <div className="fg-brand" style={{ fontSize: 11, color: INK, letterSpacing: "0.08em" }}>
+                  4Q·71X
+                </div>
+                <div style={{ fontSize: 9, color: INK, opacity: 0.6, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>
+                  CACHE
+                </div>
               </div>
+
+              {/* HUD readout, opposite corner */}
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 16,
+                  left: 16,
+                  fontSize: 10,
+                  color: INK,
+                  opacity: 0.35,
+                  letterSpacing: "0.08em",
+                  pointerEvents: "none",
+                  userSelect: "none",
+                  fontFamily: "var(--font-mono)",
+                }}
+              >
+                {BOARD_W}×{BOARD_H} / {String(elements.length).padStart(3, "0")} ITEMS
+              </div>
+
               {elements
                 .slice()
                 .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
@@ -578,38 +563,51 @@ export default function CacheBoard() {
                       )}
                       {el.type === "text" && (
                         <div
-                          contentEditable
+                          contentEditable={editingId === el.id}
                           suppressContentEditableWarning
-                          onPointerDown={(e) => e.stopPropagation()}
-                          onBlur={(e) => updateElement(el.id, { text: e.currentTarget.textContent })}
+                          ref={(node) => {
+                            if (node && editingId === el.id && document.activeElement !== node) node.focus();
+                          }}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            setEditingId(el.id);
+                          }}
+                          onPointerDown={(e) => {
+                            if (editingId === el.id) e.stopPropagation();
+                          }}
+                          onBlur={(e) => {
+                            updateElement(el.id, { text: e.currentTarget.textContent });
+                            setEditingId(null);
+                          }}
                           style={{
                             width: "100%",
                             height: "100%",
                             padding: 14,
                             fontSize: el.fontSize || 16,
-                            color: el.textColor || "#2b2620",
+                            color: el.textColor || INK,
                             outline: "none",
-                            cursor: "text",
+                            cursor: editingId === el.id ? "text" : "grab",
                             whiteSpace: "pre-wrap",
                             wordBreak: "break-word",
+                            fontFamily: "var(--font-mono)",
                           }}
                         >
                           {el.text}
                         </div>
                       )}
                     </div>
-                    {selectedId === el.id && <StitchSelection el={el} />}
+                    {selectedId === el.id && <CornerBrackets el={el} />}
                     {selectedId === el.id && (
                       <div
                         onPointerDown={(e) => onPointerDownResize(e, el)}
                         style={{
                           position: "absolute",
-                          right: -6,
-                          bottom: -6,
-                          width: 22,
-                          height: 22,
-                          borderRadius: "50%",
-                          background: "#2b2620",
+                          right: -8,
+                          bottom: -8,
+                          width: 14,
+                          height: 14,
+                          background: PINK,
+                          border: `1px solid ${INK}`,
                           cursor: "nwse-resize",
                           touchAction: "none",
                         }}
@@ -623,14 +621,23 @@ export default function CacheBoard() {
 
         {/* style panel: sidebar on desktop, bottom sheet on mobile */}
         {!isMobile && (
-          <div className="w-64 border-l border-dashed border-[#2b2620]/30 bg-[#faf6ee] p-4 overflow-y-auto flex-shrink-0">
+          <div className={styles.panel}>
             {!selected ? (
-              <p className="text-xs text-[#2b2620]/50">select a piece in this patch to style it</p>
+              <p className={styles.panelEmpty}>select a piece in this patch to style it</p>
             ) : (
-              <StylePanelContent />
+              <StylePanelContent
+                selected={selected}
+                isMobile={isMobile}
+                updateElement={updateElement}
+                deleteElement={deleteElement}
+                setSelectedId={setSelectedId}
+                bringToFront={bringToFront}
+                sendToBack={sendToBack}
+                onAdjustStart={() => pushHistory(elements)}
+              />
             )}
-            <div className="mt-8 pt-4 border-t border-dashed border-[#2b2620]/30">
-              <p className="text-[10px] text-[#2b2620]/50 leading-relaxed">
+            <div className={styles.panelFooter}>
+              <p className={styles.panelFooterText}>
                 paste images/text anywhere in the patch, drag the corner dot to resize, double-click text to edit.
                 "share link" packs the patch into the URL itself so this works with no backend; swap in a short
                 patch id cached to a database for real persistence across devices, with the same no-account-required flow.
@@ -640,15 +647,155 @@ export default function CacheBoard() {
         )}
 
         {isMobile && selected && (
-          <div
-            className="absolute bottom-0 left-0 right-0 bg-[#faf6ee] border-t border-dashed border-[#2b2620]/30 p-4 rounded-t-2xl overflow-y-auto z-30"
-            style={{ maxHeight: "55vh", boxShadow: "0 -4px 20px rgba(43,38,32,0.2)" }}
-          >
-            <StylePanelContent />
+          <div className={styles.mobileSheet} style={{ maxHeight: "55vh", boxShadow: "0 -4px 20px rgba(0,0,0,0.4)" }}>
+            <StylePanelContent
+              selected={selected}
+              isMobile={isMobile}
+              updateElement={updateElement}
+              deleteElement={deleteElement}
+              setSelectedId={setSelectedId}
+              bringToFront={bringToFront}
+              sendToBack={sendToBack}
+              onAdjustStart={() => pushHistory(elements)}
+            />
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+// viewfinder-bracket selection indicator — sharp corner marks, not a soft outline.
+// Defined outside CacheBoard so its identity is stable across renders.
+function CornerBrackets({ el }) {
+  const m = 9;
+  const len = 15;
+  const w = el.w;
+  const h = el.h;
+  return (
+    <svg
+      width={w + m * 2}
+      height={h + m * 2}
+      style={{ position: "absolute", left: -m, top: -m, pointerEvents: "none", overflow: "visible" }}
+    >
+      <path d={`M ${0} ${len} L ${0} ${0} L ${len} ${0}`} fill="none" stroke={LAVENDER} strokeWidth={2} strokeLinecap="square" />
+      <path d={`M ${w + m * 2 - len} ${0} L ${w + m * 2} ${0} L ${w + m * 2} ${len}`} fill="none" stroke={LAVENDER} strokeWidth={2} strokeLinecap="square" />
+      <path d={`M ${0} ${h + m * 2 - len} L ${0} ${h + m * 2} L ${len} ${h + m * 2}`} fill="none" stroke={LAVENDER} strokeWidth={2} strokeLinecap="square" />
+      <path d={`M ${w + m * 2 - len} ${h + m * 2} L ${w + m * 2} ${h + m * 2} L ${w + m * 2} ${h + m * 2 - len}`} fill="none" stroke={LAVENDER} strokeWidth={2} strokeLinecap="square" />
+    </svg>
+  );
+}
+
+// Style panel, also defined outside CacheBoard for the same reason — kept as a
+// stable component so range/color inputs don't lose native drag state on every
+// keystroke or slider tick.
+function StylePanelContent({ selected, isMobile, updateElement, deleteElement, setSelectedId, bringToFront, sendToBack, onAdjustStart }) {
+  return (
+    <>
+      <div className={styles.panelHeader}>
+        <span className={styles.typeLabel}>{selected.type}</span>
+        <div className={styles.iconRow}>
+          <button onClick={() => deleteElement(selected.id)} className={styles.iconBtn}>
+            <Trash2 size={16} />
+          </button>
+          {isMobile && (
+            <button onClick={() => setSelectedId(null)} className={styles.iconBtnPlain}>
+              <X size={18} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {(selected.type === "color" || selected.type === "text") && (
+        <label className={styles.field}>
+          {selected.type === "color" ? "fill" : "background"}
+          <input
+            onPointerDown={onAdjustStart}
+            type="color"
+            value={selected.bg === "transparent" ? "#ffffff" : selected.bg}
+            onChange={(e) => updateElement(selected.id, { bg: e.target.value })}
+            className={styles.colorInputSm}
+          />
+        </label>
+      )}
+
+      {selected.type === "text" && (
+        <>
+          <label className={styles.field}>
+            text color
+            <input
+            onPointerDown={onAdjustStart}
+              type="color"
+              value={selected.textColor || INK}
+              onChange={(e) => updateElement(selected.id, { textColor: e.target.value })}
+              className={styles.colorInputSm}
+            />
+          </label>
+          <label className={styles.field}>
+            font size — {selected.fontSize || 16}px
+            <input
+            onPointerDown={onAdjustStart}
+              type="range"
+              min="10"
+              max="48"
+              value={selected.fontSize || 16}
+              onChange={(e) => updateElement(selected.id, { fontSize: Number(e.target.value) })}
+            />
+          </label>
+          <button
+            onClick={() => updateElement(selected.id, { bg: selected.bg === "transparent" ? "#ffffff" : "transparent" })}
+            className={styles.smallBtn}
+          >
+            {selected.bg === "transparent" ? "add background" : "make transparent"}
+          </button>
+        </>
+      )}
+
+      <label className={styles.field}>
+        corner radius — {selected.radius ?? 0}px
+        <input
+            onPointerDown={onAdjustStart}
+          type="range"
+          min="0"
+          max="80"
+          value={selected.radius ?? 0}
+          onChange={(e) => updateElement(selected.id, { radius: Number(e.target.value) })}
+        />
+      </label>
+
+      <label className={styles.field}>
+        rotation — {selected.rotation ?? 0}°
+        <input
+            onPointerDown={onAdjustStart}
+          type="range"
+          min="-45"
+          max="45"
+          value={selected.rotation ?? 0}
+          onChange={(e) => updateElement(selected.id, { rotation: Number(e.target.value) })}
+        />
+      </label>
+
+      <label className={styles.field}>
+        opacity — {Math.round((selected.opacity ?? 1) * 100)}%
+        <input
+            onPointerDown={onAdjustStart}
+          type="range"
+          min="10"
+          max="100"
+          value={Math.round((selected.opacity ?? 1) * 100)}
+          onChange={(e) => updateElement(selected.id, { opacity: Number(e.target.value) / 100 })}
+        />
+      </label>
+
+      <div className={styles.frontBackRow}>
+        <button onClick={() => bringToFront(selected.id)} className={styles.frontBackBtn}>
+          <ChevronUp size={13} /> front
+        </button>
+        <button onClick={() => sendToBack(selected.id)} className={styles.frontBackBtn}>
+          <ChevronDown size={13} /> back
+        </button>
+      </div>
+    </>
   );
 }
 

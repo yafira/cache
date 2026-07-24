@@ -1,7 +1,7 @@
 import "./globals.css";
-import { Pixelify_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 
-const pixelify = Pixelify_Sans({
+const display = Space_Grotesk({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
   variable: "--font-display",
@@ -15,12 +15,12 @@ const plexMono = IBM_Plex_Mono({
 
 export const metadata = {
   title: "cache",
-  description: "a moodboard tool you can actually style — paste, arrange, and make it yours",
+  description: "paste anything. arrange it your way. cache it.",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${pixelify.variable} ${plexMono.variable}`}>
+    <html lang="en" className={`${display.variable} ${plexMono.variable}`}>
       <body>{children}</body>
     </html>
   );

@@ -1,10 +1,19 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
 
 body {
   font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   margin: 0;
+}
+
+button {
+  font: inherit;
 }
 
 /* the wordmark + board tag use the display face; everything else stays mono */

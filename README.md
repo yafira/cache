@@ -16,6 +16,7 @@ then open http://localhost:3000
 - `app/layout.js` — loads Pixelify Sans (display) + IBM Plex Mono (everything else) via `next/font/google`, no external `@import` or flash of unstyled text
 - `app/page.js` — renders the board
 - `components/CacheBoard.jsx` — the whole tool: paste-to-add, drag, resize, per-piece styling (fill, corner radius, rotation, opacity, layer order), canvas background, PNG export, and a shareable link
+- `components/CacheBoard.module.css` — all the styling, as plain CSS Modules (no Tailwind)
 - `app/globals.css` — tailwind + the `.fg-brand` class for the display face
 
 ## vocabulary
@@ -46,7 +47,9 @@ paste, it's already there.
 
 ## tech stack (planned — this starter uses hand-rolled canvas logic as a proof of concept)
 
-**Frontend:** Next.js, React, TypeScript
+**Frontend:** Next.js, React, TypeScript. Styling is plain CSS Modules (`CacheBoard.module.css`)
+— no Tailwind, no build-time class generation. Next.js supports CSS Modules natively with zero
+config, so there's no PostCSS/Tailwind toolchain to maintain.
 
 **Canvas:** [tldraw](https://tldraw.dev) — infinite canvas SDK with pan/zoom/select/resize/rotate/
 undo built in. Define custom shape types for image, embed, color, and text cards, and layer the
@@ -73,6 +76,15 @@ API access/business verification, so plan for a plain link card there rather tha
 thumbnail.
 
 ## known limits of this starter (the real v2 list)
+
+- **undo is in-memory only** — cmd/ctrl+z or the undo button steps back through a 50-entry history
+  held in a ref; it resets on page reload. Persisting undo history isn't usually worth it once
+  real save/cache exists — reloading a saved patch is the natural reset point.
+- **delete works via the trash icon in the style panel or the Delete/Backspace key** once something's
+  selected (guarded so it doesn't fire while you're actively typing in a text card or an input).
+- **pasted/dropped pieces land on a cascading diagonal offset** instead of dead-center, so repeated
+  pastes don't stack exactly on top of each other. If you want the last-pasted piece back where you
+  started, undo is the fastest way there.
 
 - **no stashes yet** — this starter is a single patch with no organizational layer above it.
   a `stashes` table (id, name, owner) with a `patch_id -> stash_id` foreign key is the natural
