@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Type, Square, Image as ImageIcon, Download, Link2, Trash2, ChevronUp, ChevronDown, X, Undo2 } from "lucide-react";
+import { Type, Square, Image as ImageIcon, Download, Link2, Trash2, ChevronUp, ChevronDown, X, Undo2, FileText, ExternalLink, Paperclip } from "lucide-react";
 import styles from "./CacheBoard.module.css";
 
 // ---- constants ----
@@ -92,9 +92,12 @@ function makePatternTile(patternId) {
 let idCounter = 1;
 const newId = () => `el-${idCounter++}`;
 
-function loadImage(src) {
+const URL_PATTERN = /^https?:\/\/[^\s]+$/i;
+
+function loadImage(src, allowCrossOrigin) {
   return new Promise((resolve) => {
     const img = new window.Image();
+    if (allowCrossOrigin) img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null);
     img.src = src;
@@ -111,6 +114,11 @@ export default function CacheBoard() {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [bgRemovalId, setBgRemovalId] = useState(null);
   const [bgRemovalError, setBgRemovalError] = useState(null);
+  const [linkPanelOpen, setLinkPanelOpen] = useState(false);
+  const [linkInputValue, setLinkInputValue] = useState("");
+  const linkPanelRef = useRef(null);
+  const linkButtonRef = useRef(null);
+  const fileUploadInputRef = useRef(null);
   const [copyStatus, setCopyStatus] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [scale, setScale] = useState(1);
@@ -227,6 +235,72 @@ export default function CacheBoard() {
     });
   };
 
+  // ---- links: create immediately with a placeholder, then enrich once the
+  // server-side unfurl route returns a title/description/image ----
+  const addLink = (rawUrl) => {
+    const url = rawUrl.trim();
+    if (!URL_PATTERN.test(url)) return;
+    const { dx, dy } = nextOffset();
+    const id = newId();
+    let domain = url;
+    try {
+      domain = new URL(url).hostname.replace(/^www\./, "");
+    } catch {
+      // keep raw url as fallback
+    }
+    addElement({
+      id,
+      type: "link",
+      url,
+      title: domain,
+      description: "",
+      image: null,
+      domain,
+      x: BOARD_W / 2 - 130 + dx,
+      y: BOARD_H / 2 - 80 + dy,
+      w: 260,
+      h: 160,
+      radius: 0,
+    });
+
+    fetch(`/api/unfurl?url=${encodeURIComponent(url)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && !data.error) {
+          updateElement(id, { title: data.title, description: data.description, image: data.image, domain: data.domain });
+        } else if (data) {
+          updateElement(id, { domain: data.domain || domain });
+        }
+      })
+      .catch(() => {
+        // keep the placeholder card — still a working link even without a preview
+      });
+  };
+
+  // ---- files: PDFs and other documents, stored inline as a data URL (same
+  // no-backend approach as images) ----
+  const handleFileUpload = (file) => {
+    if (!file) return;
+    const { dx, dy } = nextOffset();
+    const reader = new FileReader();
+    reader.onload = () => {
+      addElement({
+        id: newId(),
+        type: "file",
+        name: file.name,
+        fileType: file.type || "application/octet-stream",
+        size: file.size,
+        dataUrl: reader.result,
+        x: BOARD_W / 2 - 110 + dx,
+        y: BOARD_H / 2 - 70 + dy,
+        w: 220,
+        h: 140,
+        radius: 0,
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleFiles = (files, dropPos) => {
     const { dx, dy } = nextOffset();
     Array.from(files).forEach((file, i) => {
@@ -316,19 +390,24 @@ export default function CacheBoard() {
       if (!handledImage) {
         const text = e.clipboardData.getData("text/plain");
         if (text && text.trim()) {
-          const { dx, dy } = nextOffset();
-          addElement({
-            id: newId(),
-            type: "text",
-            x: BOARD_W / 2 - 110 + dx,
-            y: BOARD_H / 2 - 50 + dy,
-            w: 240,
-            h: 110,
-            text: text.trim().slice(0, 400),
-            fontSize: 16,
-            textColor: INK,
-            bg: "#ffffff",
-          });
+          const trimmed = text.trim();
+          if (URL_PATTERN.test(trimmed)) {
+            addLink(trimmed);
+          } else {
+            const { dx, dy } = nextOffset();
+            addElement({
+              id: newId(),
+              type: "text",
+              x: BOARD_W / 2 - 110 + dx,
+              y: BOARD_H / 2 - 50 + dy,
+              w: 240,
+              h: 110,
+              text: trimmed.slice(0, 400),
+              fontSize: 16,
+              textColor: INK,
+              bg: "#ffffff",
+            });
+          }
         }
       }
     };
@@ -472,6 +551,72 @@ export default function CacheBoard() {
         ctx.font = `${el.fontSize || 16}px ui-monospace, monospace`;
         ctx.textBaseline = "top";
         wrapText(ctx, el.text || "", 14, 14, el.w - 28, (el.fontSize || 16) * 1.35);
+      } else if (el.type === "link") {
+        ctx.fillStyle = "#ffffff";
+        roundRectPath(ctx, 0, 0, el.w, el.h, el.radius || 0);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(13,13,12,0.2)";
+        ctx.lineWidth = 1;
+        roundRectPath(ctx, 0.5, 0.5, el.w - 1, el.h - 1, el.radius || 0);
+        ctx.stroke();
+
+        const bodyH = 52;
+        const imgH = Math.max(0, el.h - bodyH);
+        let drewImage = false;
+        if (el.image) {
+          const img = await loadImage(el.image, true);
+          if (img) {
+            try {
+              ctx.save();
+              roundRectPath(ctx, 0, 0, el.w, imgH, 0);
+              ctx.clip();
+              const s = Math.max(el.w / img.width, imgH / img.height);
+              const dw = img.width * s;
+              const dh = img.height * s;
+              ctx.drawImage(img, (el.w - dw) / 2, (imgH - dh) / 2, dw, dh);
+              ctx.restore();
+              drewImage = true;
+            } catch {
+              // remote image didn't allow CORS — fall back to a plain fill
+              // rather than tainting (and breaking) the whole export
+              ctx.restore();
+            }
+          }
+        }
+        if (!drewImage) {
+          ctx.fillStyle = "rgba(13,13,12,0.06)";
+          ctx.fillRect(0, 0, el.w, imgH);
+        }
+        ctx.fillStyle = INK;
+        ctx.font = "600 13px ui-monospace, monospace";
+        ctx.textBaseline = "top";
+        ctx.fillText((el.title || el.url || "").slice(0, 40), 12, imgH + 10, el.w - 24);
+        ctx.fillStyle = "rgba(13,13,12,0.5)";
+        ctx.font = "11px ui-monospace, monospace";
+        ctx.fillText(el.domain || "", 12, imgH + 28, el.w - 24);
+      } else if (el.type === "file") {
+        ctx.fillStyle = "#ffffff";
+        roundRectPath(ctx, 0, 0, el.w, el.h, el.radius || 0);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(13,13,12,0.2)";
+        ctx.lineWidth = 1;
+        roundRectPath(ctx, 0.5, 0.5, el.w - 1, el.h - 1, el.radius || 0);
+        ctx.stroke();
+
+        ctx.fillStyle = INK;
+        ctx.font = "600 13px ui-monospace, monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText((el.name || "file").slice(0, 30), el.w / 2, el.h / 2 + 4, el.w - 24);
+        ctx.fillStyle = "rgba(13,13,12,0.5)";
+        ctx.font = "10px ui-monospace, monospace";
+        ctx.fillText(
+          `${(el.fileType || "file").split("/").pop()} · ${Math.round((el.size || 0) / 1024)}kb`,
+          el.w / 2,
+          el.h / 2 + 22,
+          el.w - 24
+        );
+        ctx.textAlign = "left";
       }
       ctx.restore();
     }
@@ -511,6 +656,17 @@ export default function CacheBoard() {
     window.addEventListener("pointerdown", onClickOutside);
     return () => window.removeEventListener("pointerdown", onClickOutside);
   }, [bgPanelOpen]);
+
+  // ---- close the link-add popover when clicking outside it ----
+  useEffect(() => {
+    if (!linkPanelOpen) return;
+    const onClickOutside = (e) => {
+      if (linkPanelRef.current?.contains(e.target) || linkButtonRef.current?.contains(e.target)) return;
+      setLinkPanelOpen(false);
+    };
+    window.addEventListener("pointerdown", onClickOutside);
+    return () => window.removeEventListener("pointerdown", onClickOutside);
+  }, [linkPanelOpen]);
 
   // ---- keyboard shortcuts: delete/backspace removes the selected piece, cmd/ctrl+z undoes ----
   useEffect(() => {
@@ -579,6 +735,57 @@ export default function CacheBoard() {
           multiple
           hidden
           onChange={(e) => e.target.files && handleFiles(e.target.files)}
+        />
+
+        <div style={{ position: "relative" }}>
+          <button
+            ref={linkButtonRef}
+            onClick={() => setLinkPanelOpen((v) => !v)}
+            className={styles.btn}
+          >
+            <Link2 size={13} /> <span className={styles.hideOnMobile}>link</span>
+          </button>
+          {linkPanelOpen && (
+            <div ref={linkPanelRef} className={styles.bgPanel}>
+              <div className={styles.bgPanelLabel}>paste a url</div>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (linkInputValue.trim()) {
+                    addLink(linkInputValue.trim());
+                    setLinkInputValue("");
+                    setLinkPanelOpen(false);
+                  }
+                }}
+                style={{ display: "flex", gap: 6 }}
+              >
+                <input
+                  type="text"
+                  value={linkInputValue}
+                  onChange={(e) => setLinkInputValue(e.target.value)}
+                  placeholder="https://…"
+                  autoFocus
+                  className={styles.linkTextInput}
+                />
+                <button type="submit" className={styles.smallBtn} style={{ marginTop: 0 }}>
+                  add
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+
+        <button onClick={() => fileUploadInputRef.current?.click()} className={styles.btn}>
+          <Paperclip size={13} /> <span className={styles.hideOnMobile}>file</span>
+        </button>
+        <input
+          ref={fileUploadInputRef}
+          type="file"
+          hidden
+          onChange={(e) => {
+            if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
+            e.target.value = "";
+          }}
         />
 
         <div style={{ position: "relative" }}>
@@ -825,7 +1032,46 @@ export default function CacheBoard() {
                           {el.text}
                         </div>
                       )}
+                      {el.type === "link" && (
+                        <div className={styles.linkCard}>
+                          {el.image ? (
+                            <div className={styles.linkCardImage} style={{ backgroundImage: `url(${el.image})` }} />
+                          ) : (
+                            <div className={styles.linkCardImage} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <Link2 size={24} style={{ opacity: 0.3 }} />
+                            </div>
+                          )}
+                          <div className={styles.linkCardBody}>
+                            <div className={styles.linkCardTitle}>{el.title}</div>
+                            <div className={styles.linkCardDomain}>{el.domain}</div>
+                          </div>
+                        </div>
+                      )}
+                      {el.type === "file" && (
+                        <div className={styles.fileCard}>
+                          <FileText size={28} style={{ color: INK, opacity: 0.6 }} />
+                          <div className={styles.fileCardName}>{el.name}</div>
+                          <div className={styles.fileCardMeta}>
+                            {(el.fileType || "file").split("/").pop()} · {Math.round((el.size || 0) / 1024)}kb
+                          </div>
+                        </div>
+                      )}
                     </div>
+
+                    {(el.type === "link" || el.type === "file") && (
+                      <button
+                        className={styles.openBtn}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const target = el.type === "link" ? el.url : el.dataUrl;
+                          window.open(target, "_blank", "noopener,noreferrer");
+                        }}
+                        title={el.type === "link" ? "open link" : "open file"}
+                      >
+                        <ExternalLink size={13} />
+                      </button>
+                    )}
                     {selectedId === el.id && <CornerBrackets el={el} />}
                     {selectedId === el.id && (
                       <div

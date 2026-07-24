@@ -77,6 +77,26 @@ thumbnail.
 
 ## known limits of this starter (the real v2 list)
 
+- **links now unfurl into real cards.** Paste a URL (or use the link button) and it lands
+  immediately as a placeholder card, then `app/api/unfurl/route.js` — a small server-side route —
+  fetches the page and extracts `og:title` / `og:description` / `og:image` to enrich it. This route
+  runs server-side specifically to dodge the browser's CORS restrictions on fetching arbitrary pages;
+  it uses regex-based tag extraction, which is fine for a starter but fragile against malformed HTML —
+  swap in a real HTML parser (e.g. `cheerio`) if this needs to be more robust. Each card has an explicit
+  "open ↗" button rather than making the whole card clickable, so opening a link doesn't fight with
+  dragging it.
+- **files (PDFs, docs, anything) work the same way as images** — stored inline as a base64 data URL,
+  no backend needed to add or open them. **The real limit is share links:** a PDF of any real size
+  will blow past what's practical to encode into a URL hash (already flagged above for background
+  images — this makes it much more likely to actually bite). A multi-page PDF shared this way may
+  simply produce a broken/truncated link. This is the clearest signal yet that "real" sharing needs
+  actual file storage (Supabase Storage / Cloudflare R2) with the board referencing a URL rather than
+  embedding bytes — everything else about the guest-edit-token sharing model stays the same once
+  that swap happens.
+- **link preview images are loaded with `crossOrigin="anonymous"`** for canvas export safety — if the
+  source site doesn't allow CORS on its preview image, the export just falls back to a blank card
+  background rather than failing (or breaking the whole PNG export via a tainted canvas).
+
 - **⚠️ `@imgly/background-removal` (used for the "remove background" button) is AGPL-3.0 licensed.**
   This is worth resolving before shipping anything commercial — AGPL generally requires that if the
   app runs as a network-accessible service, the app's own source has to be made available under AGPL
