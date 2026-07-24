@@ -108,6 +108,9 @@ export default function CacheBoard() {
   const [canvasPattern, setCanvasPattern] = useState("none");
   const [canvasImage, setCanvasImage] = useState(null);
   const [bgPanelOpen, setBgPanelOpen] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [bgRemovalId, setBgRemovalId] = useState(null);
+  const [bgRemovalError, setBgRemovalError] = useState(null);
   const [copyStatus, setCopyStatus] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [scale, setScale] = useState(1);
@@ -224,7 +227,7 @@ export default function CacheBoard() {
     });
   };
 
-  const handleFiles = (files) => {
+  const handleFiles = (files, dropPos) => {
     const { dx, dy } = nextOffset();
     Array.from(files).forEach((file, i) => {
       if (!file.type.startsWith("image/")) return;
@@ -235,12 +238,14 @@ export default function CacheBoard() {
         img.onload = () => {
           const targetW = 260;
           const targetH = (img.height / img.width) * targetW;
+          const baseX = dropPos ? dropPos.x - targetW / 2 : BOARD_W / 2 - 130;
+          const baseY = dropPos ? dropPos.y - targetH / 2 : BOARD_H / 2 - targetH / 2;
           addElement({
             id: newId(),
             type: "image",
             src,
-            x: BOARD_W / 2 - 130 + dx + i * 24,
-            y: BOARD_H / 2 - targetH / 2 + dy + i * 24,
+            x: baseX + dx + i * 24,
+            y: baseY + dy + i * 24,
             w: targetW,
             h: targetH,
             radius: 0,
@@ -257,6 +262,40 @@ export default function CacheBoard() {
     const reader = new FileReader();
     reader.onload = () => setCanvasImage(reader.result);
     reader.readAsDataURL(file);
+  };
+
+  // ---- remove background from an image piece on the board (client-side ML, no backend) ----
+  const removeImageBackground = async (id) => {
+    const el = elements.find((e) => e.id === id);
+    if (!el || el.type !== "image") return;
+
+    setBgRemovalError(null);
+    setBgRemovalId(id);
+    pushHistory(elements);
+
+    try {
+      const { removeBackground } = await import("@imgly/background-removal");
+      const blob = await removeBackground(el.src);
+      const reader = new FileReader();
+      reader.onload = () => {
+        updateElement(id, {
+          src: reader.result,
+          originalSrc: el.originalSrc || el.src,
+        });
+        setBgRemovalId(null);
+      };
+      reader.readAsDataURL(blob);
+    } catch (err) {
+      setBgRemovalError("couldn't remove background — check your connection and try again");
+      setBgRemovalId(null);
+    }
+  };
+
+  const restoreImageBackground = (id) => {
+    const el = elements.find((e) => e.id === id);
+    if (!el || !el.originalSrc) return;
+    pushHistory(elements);
+    updateElement(id, { src: el.originalSrc });
   };
 
   // ---- paste support: images and plain text land straight on the board ----
@@ -633,6 +672,27 @@ export default function CacheBoard() {
             <div
               ref={boardRef}
               onPointerDown={() => setSelectedId(null)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (!isDraggingOver) setIsDraggingOver(true);
+              }}
+              onDragLeave={(e) => {
+                if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget)) {
+                  setIsDraggingOver(false);
+                }
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDraggingOver(false);
+                const files = e.dataTransfer?.files;
+                if (!files || !files.length) return;
+                const rect = boardRef.current.getBoundingClientRect();
+                const dropPos = {
+                  x: (e.clientX - rect.left) / scale,
+                  y: (e.clientY - rect.top) / scale,
+                };
+                handleFiles(files, dropPos);
+              }}
               style={{
                 width: BOARD_W,
                 height: BOARD_H,
@@ -641,13 +701,18 @@ export default function CacheBoard() {
                   ? { backgroundImage: `url(${canvasImage})`, backgroundSize: "cover", backgroundPosition: "center" }
                   : patternCSS(canvasPattern)),
                 position: "relative",
-                boxShadow: "0 0 0 1px rgba(236,231,219,0.08), 0 12px 40px rgba(0,0,0,0.35)",
+                boxShadow: isDraggingOver
+                  ? `0 0 0 2px ${LAVENDER}, 0 12px 40px rgba(0,0,0,0.35)`
+                  : "0 0 0 1px rgba(236,231,219,0.08), 0 12px 40px rgba(0,0,0,0.35)",
                 transform: `scale(${scale})`,
                 transformOrigin: "top left",
                 touchAction: "none",
                 overflow: "hidden",
               }}
             >
+              {isDraggingOver && (
+                <div className={styles.dropOverlay}>drop to add</div>
+              )}
               {elements.length === 0 && (
                 <div className={styles.emptyState}>paste anything to start this patch</div>
               )}
@@ -799,6 +864,10 @@ export default function CacheBoard() {
                 bringToFront={bringToFront}
                 sendToBack={sendToBack}
                 onAdjustStart={() => pushHistory(elements)}
+                removeImageBackground={removeImageBackground}
+                restoreImageBackground={restoreImageBackground}
+                bgRemovalId={bgRemovalId}
+                bgRemovalError={bgRemovalError}
               />
             )}
             <div className={styles.panelFooter}>
@@ -822,6 +891,10 @@ export default function CacheBoard() {
               bringToFront={bringToFront}
               sendToBack={sendToBack}
               onAdjustStart={() => pushHistory(elements)}
+              removeImageBackground={removeImageBackground}
+              restoreImageBackground={restoreImageBackground}
+              bgRemovalId={bgRemovalId}
+              bgRemovalError={bgRemovalError}
             />
           </div>
         )}
@@ -854,7 +927,20 @@ function CornerBrackets({ el }) {
 // Style panel, also defined outside CacheBoard for the same reason — kept as a
 // stable component so range/color inputs don't lose native drag state on every
 // keystroke or slider tick.
-function StylePanelContent({ selected, isMobile, updateElement, deleteElement, setSelectedId, bringToFront, sendToBack, onAdjustStart }) {
+function StylePanelContent({
+  selected,
+  isMobile,
+  updateElement,
+  deleteElement,
+  setSelectedId,
+  bringToFront,
+  sendToBack,
+  onAdjustStart,
+  removeImageBackground,
+  restoreImageBackground,
+  bgRemovalId,
+  bgRemovalError,
+}) {
   return (
     <>
       <div className={styles.panelHeader}>
@@ -870,6 +956,29 @@ function StylePanelContent({ selected, isMobile, updateElement, deleteElement, s
           )}
         </div>
       </div>
+
+      {selected.type === "image" && (
+        <div className={styles.field}>
+          background removal
+          {bgRemovalId === selected.id ? (
+            <span className={styles.processingLabel}>removing background…</span>
+          ) : (
+            <div className={styles.frontBackRow} style={{ marginTop: 4 }}>
+              <button onClick={() => removeImageBackground(selected.id)} className={styles.smallBtn} style={{ marginTop: 0 }}>
+                remove background
+              </button>
+              {selected.originalSrc && (
+                <button onClick={() => restoreImageBackground(selected.id)} className={styles.smallBtn} style={{ marginTop: 0 }}>
+                  restore original
+                </button>
+              )}
+            </div>
+          )}
+          {bgRemovalError && bgRemovalId === null && (
+            <span className={styles.errorLabel}>{bgRemovalError}</span>
+          )}
+        </div>
+      )}
 
       {(selected.type === "color" || selected.type === "text") && (
         <label className={styles.field}>

@@ -77,6 +77,23 @@ thumbnail.
 
 ## known limits of this starter (the real v2 list)
 
+- **⚠️ `@imgly/background-removal` (used for the "remove background" button) is AGPL-3.0 licensed.**
+  This is worth resolving before shipping anything commercial — AGPL generally requires that if the
+  app runs as a network-accessible service, the app's own source has to be made available under AGPL
+  too, unless a commercial license is purchased from IMG.LY (they sell one specifically for this).
+  This isn't legal advice, just a flag: worth a real read of the license or a quick conversation with
+  a lawyer before this goes further than a personal prototype. If AGPL doesn't work for the business,
+  alternatives are a paid IMG.LY commercial license, or swapping in a client-side segmentation model
+  under a more permissive license (e.g. a Hugging Face Transformers.js pipeline with a compatible
+  model, though matting quality varies more by model than this library's purpose-built one).
+- **background removal runs entirely client-side** — a WASM/ONNX model loads in the browser (via
+  `import("@imgly/background-removal")`, code-split so it doesn't bloat the initial bundle) and
+  processes the image locally. First use in a session will be slower while the model downloads;
+  subsequent removals in the same session are faster.
+- **the original image is kept** as `originalSrc` on the element once background removal runs once,
+  so "restore original" is always available without needing undo. Worth knowing: this roughly doubles
+  that image's payload size in the share-link hash, compounding the size caveat already noted above.
+
 - **undo is in-memory only** — cmd/ctrl+z or the undo button steps back through a 50-entry history
   held in a ref; it resets on page reload. Persisting undo history isn't usually worth it once
   real save/cache exists — reloading a saved patch is the natural reset point.

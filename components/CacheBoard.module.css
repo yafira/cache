@@ -351,3 +351,37 @@
   background-position: center;
   flex-shrink: 0;
 }
+
+.dropOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(201, 188, 224, 0.15);
+  color: #0d0d0c;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  pointer-events: none;
+  z-index: 40;
+}
+
+.processingLabel {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: #f0bfd0;
+  margin-top: 4px;
+  display: block;
+}
+
+.errorLabel {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: #f0bfd0;
+  margin-top: 6px;
+  display: block;
+  line-height: 1.5;
+}
