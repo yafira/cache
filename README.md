@@ -77,6 +77,13 @@ thumbnail.
 
 ## known limits of this starter (the real v2 list)
 
+- **the download button now offers two formats.** PNG is the flat visual snapshot (what it always
+  did). HTML exports a single self-contained file where link cards stay real `<a href>` tags and
+  file cards stay real openable/downloadable links — genuinely functional, not just a picture of a
+  document icon. No backend involved; everything (images, files, link previews) is inlined as data
+  URLs in the one HTML file, so it's fully portable but can get large fast with big attachments —
+  same size caveat as the share link, just landing in a downloaded file instead of a URL.
+
 - **links now unfurl into real cards.** Paste a URL (or use the link button) and it lands
   immediately as a placeholder card, then `app/api/unfurl/route.js` — a small server-side route —
   fetches the page and extracts `og:title` / `og:description` / `og:image` to enrich it. This route

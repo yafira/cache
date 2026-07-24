@@ -94,6 +94,14 @@ const newId = () => `el-${idCounter++}`;
 
 const URL_PATTERN = /^https?:\/\/[^\s]+$/i;
 
+function escapeHtml(str) {
+  return String(str ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+}
+
+function escapeAttr(str) {
+  return String(str ?? "").replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" }[c]));
+}
+
 function loadImage(src, allowCrossOrigin) {
   return new Promise((resolve) => {
     const img = new window.Image();
@@ -119,6 +127,9 @@ export default function CacheBoard() {
   const linkPanelRef = useRef(null);
   const linkButtonRef = useRef(null);
   const fileUploadInputRef = useRef(null);
+  const [downloadPanelOpen, setDownloadPanelOpen] = useState(false);
+  const downloadPanelRef = useRef(null);
+  const downloadButtonRef = useRef(null);
   const [copyStatus, setCopyStatus] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [scale, setScale] = useState(1);
@@ -631,6 +642,85 @@ export default function CacheBoard() {
     });
   };
 
+  // ---- export as a standalone HTML file — the "functional" export.
+  // Unlike the PNG, link cards stay real <a> tags and file cards stay
+  // real openable/downloadable links; no backend involved, it's just a
+  // single self-contained file. ----
+  const handleExportHTML = () => {
+    const bg = canvasImage
+      ? `background-image:url('${escapeAttr(canvasImage)}');background-size:cover;background-position:center;background-color:${canvasBg};`
+      : canvasPattern !== "none"
+      ? (() => {
+          const p = patternCSS(canvasPattern);
+          return `background-color:${canvasBg};background-image:${p.backgroundImage};background-size:${p.backgroundSize};`;
+        })()
+      : `background-color:${canvasBg};`;
+
+    const sorted = [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+    const pieces = sorted
+      .map((el) => {
+        const common = `position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;transform:rotate(${
+          el.rotation || 0
+        }deg);opacity:${el.opacity ?? 1};border-radius:${el.radius || 0}px;overflow:hidden;box-sizing:border-box;`;
+
+        if (el.type === "color") {
+          return `<div style="${common}background:${el.bg};"></div>`;
+        }
+        if (el.type === "image" && el.src) {
+          return `<div style="${common}"><img src="${escapeAttr(el.src)}" style="width:100%;height:100%;object-fit:cover;display:block;" alt="" /></div>`;
+        }
+        if (el.type === "text") {
+          const textBg = el.bg && el.bg !== "transparent" ? el.bg : "transparent";
+          return `<div style="${common}background:${textBg};padding:14px;font-family:ui-monospace,monospace;font-size:${
+            el.fontSize || 16
+          }px;color:${el.textColor || INK};white-space:pre-wrap;word-break:break-word;">${escapeHtml(el.text)}</div>`;
+        }
+        if (el.type === "link") {
+          const imgHtml = el.image
+            ? `<div style="flex:1;background-image:url('${escapeAttr(el.image)}');background-size:cover;background-position:center;"></div>`
+            : `<div style="flex:1;background:rgba(13,13,12,0.06);"></div>`;
+          return `<a href="${escapeAttr(el.url)}" target="_blank" rel="noopener noreferrer" style="${common}display:flex;flex-direction:column;background:#fff;border:1px solid rgba(13,13,12,0.2);text-decoration:none;color:inherit;">${imgHtml}<div style="padding:10px 12px;flex-shrink:0;"><div style="font-family:ui-monospace,monospace;font-weight:600;font-size:13px;color:#0d0d0c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(
+            el.title
+          )}</div><div style="font-family:ui-monospace,monospace;font-size:11px;color:rgba(13,13,12,0.5);margin-top:2px;">${escapeHtml(
+            el.domain
+          )}</div></div></a>`;
+        }
+        if (el.type === "file") {
+          const meta = `${(el.fileType || "file").split("/").pop()} · ${Math.round((el.size || 0) / 1024)}kb — click to open`;
+          return `<a href="${escapeAttr(el.dataUrl)}" download="${escapeAttr(el.name)}" target="_blank" style="${common}display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;border:1px solid rgba(13,13,12,0.2);text-decoration:none;color:inherit;padding:12px;text-align:center;"><div style="font-family:ui-monospace,monospace;font-weight:600;font-size:12px;color:#0d0d0c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${escapeHtml(
+            el.name
+          )}</div><div style="font-family:ui-monospace,monospace;font-size:10px;color:rgba(13,13,12,0.5);text-transform:uppercase;">${escapeHtml(
+            meta
+          )}</div></a>`;
+        }
+        return "";
+      })
+      .join("\n    ");
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>cache — patch export</title>
+<style>* { box-sizing: border-box; } body { margin: 0; padding: 24px; background: #1c1b19; display: flex; justify-content: center; }</style>
+</head>
+<body>
+  <div style="position:relative;width:${BOARD_W}px;height:${BOARD_H}px;${bg}box-shadow:0 12px 40px rgba(0,0,0,0.35);">
+    ${pieces}
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "patch.html";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // ---- share link (state packed into the URL hash — no backend needed for this starter) ----
   const handleShare = async () => {
     const payload = JSON.stringify({ elements, canvasBg, canvasPattern, canvasImage });
@@ -667,6 +757,17 @@ export default function CacheBoard() {
     window.addEventListener("pointerdown", onClickOutside);
     return () => window.removeEventListener("pointerdown", onClickOutside);
   }, [linkPanelOpen]);
+
+  // ---- close the download-options popover when clicking outside it ----
+  useEffect(() => {
+    if (!downloadPanelOpen) return;
+    const onClickOutside = (e) => {
+      if (downloadPanelRef.current?.contains(e.target) || downloadButtonRef.current?.contains(e.target)) return;
+      setDownloadPanelOpen(false);
+    };
+    window.addEventListener("pointerdown", onClickOutside);
+    return () => window.removeEventListener("pointerdown", onClickOutside);
+  }, [downloadPanelOpen]);
 
   // ---- keyboard shortcuts: delete/backspace removes the selected piece, cmd/ctrl+z undoes ----
   useEffect(() => {
@@ -862,13 +963,41 @@ export default function CacheBoard() {
           <button onClick={handleShare} className={styles.btn}>
             <Link2 size={13} /> <span className={styles.hideBelowMd}>share</span>
           </button>
-          <button
-            onClick={handleExport}
-            style={{ borderColor: BUTTER, background: BUTTER, border: "1px solid " + BUTTER }}
-            className={`${styles.btn} ${styles.btnPrimary}`}
-          >
-            <Download size={13} /> <span className={styles.hideBelowMd}>download</span>
-          </button>
+          <div style={{ position: "relative" }}>
+            <button
+              ref={downloadButtonRef}
+              onClick={() => setDownloadPanelOpen((v) => !v)}
+              style={{ borderColor: BUTTER, background: BUTTER, border: "1px solid " + BUTTER }}
+              className={`${styles.btn} ${styles.btnPrimary}`}
+            >
+              <Download size={13} /> <span className={styles.hideBelowMd}>download</span>
+            </button>
+            {downloadPanelOpen && (
+              <div ref={downloadPanelRef} className={styles.bgPanel} style={{ right: 0, left: "auto" }}>
+                <div className={styles.bgPanelLabel}>export as</div>
+                <button
+                  onClick={() => {
+                    handleExport();
+                    setDownloadPanelOpen(false);
+                  }}
+                  className={styles.smallBtn}
+                  style={{ marginTop: 0, width: "100%" }}
+                >
+                  PNG — flat image
+                </button>
+                <button
+                  onClick={() => {
+                    handleExportHTML();
+                    setDownloadPanelOpen(false);
+                  }}
+                  className={styles.smallBtn}
+                  style={{ width: "100%" }}
+                >
+                  HTML — links & files stay clickable
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
