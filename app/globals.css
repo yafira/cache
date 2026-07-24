@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  margin: 0;
+}
+
+/* the wordmark + board tag use the display face; everything else stays mono */
+.fg-brand {
+  font-family: var(--font-display), var(--font-mono), monospace;
+}
