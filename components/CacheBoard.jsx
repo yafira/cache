@@ -27,6 +27,68 @@ const SWATCHES = [
   { name: "pink", hex: PINK },
 ];
 
+const PATTERNS = [
+  { id: "none", label: "none" },
+  { id: "dots", label: "dots" },
+  { id: "grid", label: "grid" },
+  { id: "diagonal", label: "diagonal" },
+];
+
+// CSS for the live board — used only when there's no background image set
+function patternCSS(patternId) {
+  switch (patternId) {
+    case "dots":
+      return { backgroundImage: "radial-gradient(rgba(13,13,12,0.16) 1.4px, transparent 1.4px)", backgroundSize: "18px 18px" };
+    case "grid":
+      return {
+        backgroundImage:
+          "linear-gradient(rgba(13,13,12,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(13,13,12,0.12) 1px, transparent 1px)",
+        backgroundSize: "28px 28px, 28px 28px",
+      };
+    case "diagonal":
+      return {
+        backgroundImage: "repeating-linear-gradient(45deg, rgba(13,13,12,0.14) 0 1.5px, transparent 1.5px 14px)",
+        backgroundSize: "auto",
+      };
+    default:
+      return {};
+  }
+}
+
+// same patterns, rendered as a small tile for canvas export via createPattern —
+// keeps the exported PNG matching what's on screen
+function makePatternTile(patternId) {
+  const size = patternId === "diagonal" ? 28 : patternId === "grid" ? 28 : 18;
+  const tile = document.createElement("canvas");
+  tile.width = size;
+  tile.height = size;
+  const tctx = tile.getContext("2d");
+
+  if (patternId === "dots") {
+    tctx.fillStyle = "rgba(13,13,12,0.16)";
+    tctx.beginPath();
+    tctx.arc(size / 2, size / 2, 1.4, 0, Math.PI * 2);
+    tctx.fill();
+  } else if (patternId === "grid") {
+    tctx.strokeStyle = "rgba(13,13,12,0.12)";
+    tctx.lineWidth = 1;
+    tctx.beginPath();
+    tctx.moveTo(0, 0.5);
+    tctx.lineTo(size, 0.5);
+    tctx.moveTo(0.5, 0);
+    tctx.lineTo(0.5, size);
+    tctx.stroke();
+  } else if (patternId === "diagonal") {
+    tctx.strokeStyle = "rgba(13,13,12,0.14)";
+    tctx.lineWidth = 1.5;
+    tctx.beginPath();
+    tctx.moveTo(0, size);
+    tctx.lineTo(size, 0);
+    tctx.stroke();
+  }
+  return tile;
+}
+
 let idCounter = 1;
 const newId = () => `el-${idCounter++}`;
 
@@ -43,6 +105,9 @@ export default function CacheBoard() {
   const [elements, setElements] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [canvasBg, setCanvasBg] = useState(BONE);
+  const [canvasPattern, setCanvasPattern] = useState("none");
+  const [canvasImage, setCanvasImage] = useState(null);
+  const [bgPanelOpen, setBgPanelOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [scale, setScale] = useState(1);
@@ -51,6 +116,9 @@ export default function CacheBoard() {
   const dragRef = useRef(null);
   const resizeRef = useRef(null);
   const fileInputRef = useRef(null);
+  const bgImageInputRef = useRef(null);
+  const bgPanelRef = useRef(null);
+  const bgButtonRef = useRef(null);
   const zCounter = useRef(1);
   const placeCounter = useRef(0);
   const historyRef = useRef([]);
@@ -105,6 +173,8 @@ export default function CacheBoard() {
         if (decoded?.elements) {
           setElements(decoded.elements);
           setCanvasBg(decoded.canvasBg || BONE);
+          setCanvasPattern(decoded.canvasPattern || "none");
+          setCanvasImage(decoded.canvasImage || null);
           const maxZ = Math.max(1, ...decoded.elements.map((e) => e.zIndex || 1));
           zCounter.current = maxZ + 1;
           idCounter = decoded.elements.length + 1;
@@ -180,6 +250,13 @@ export default function CacheBoard() {
       };
       reader.readAsDataURL(file);
     });
+  };
+
+  const handleBgImage = (file) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => setCanvasImage(reader.result);
+    reader.readAsDataURL(file);
   };
 
   // ---- paste support: images and plain text land straight on the board ----
@@ -305,6 +382,24 @@ export default function CacheBoard() {
     ctx.fillStyle = canvasBg;
     ctx.fillRect(0, 0, BOARD_W, BOARD_H);
 
+    if (canvasImage) {
+      const bg = await loadImage(canvasImage);
+      if (bg) {
+        // cover-fit crop, same behavior as CSS background-size: cover
+        const scaleCover = Math.max(BOARD_W / bg.width, BOARD_H / bg.height);
+        const drawW = bg.width * scaleCover;
+        const drawH = bg.height * scaleCover;
+        const offX = (BOARD_W - drawW) / 2;
+        const offY = (BOARD_H - drawH) / 2;
+        ctx.drawImage(bg, offX, offY, drawW, drawH);
+      }
+    } else if (canvasPattern !== "none") {
+      const tile = makePatternTile(canvasPattern);
+      const pattern = ctx.createPattern(tile, "repeat");
+      ctx.fillStyle = pattern;
+      ctx.fillRect(0, 0, BOARD_W, BOARD_H);
+    }
+
     const sorted = [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     for (const el of sorted) {
       ctx.save();
@@ -354,7 +449,7 @@ export default function CacheBoard() {
 
   // ---- share link (state packed into the URL hash — no backend needed for this starter) ----
   const handleShare = async () => {
-    const payload = JSON.stringify({ elements, canvasBg });
+    const payload = JSON.stringify({ elements, canvasBg, canvasPattern, canvasImage });
     const encoded = btoa(encodeURIComponent(payload));
     const url = `${window.location.origin}${window.location.pathname}#patch=${encoded}`;
     window.location.hash = `patch=${encoded}`;
@@ -366,6 +461,17 @@ export default function CacheBoard() {
     }
     setTimeout(() => setCopyStatus(""), 2000);
   };
+
+  // ---- close the background popover when clicking outside it ----
+  useEffect(() => {
+    if (!bgPanelOpen) return;
+    const onClickOutside = (e) => {
+      if (bgPanelRef.current?.contains(e.target) || bgButtonRef.current?.contains(e.target)) return;
+      setBgPanelOpen(false);
+    };
+    window.addEventListener("pointerdown", onClickOutside);
+    return () => window.removeEventListener("pointerdown", onClickOutside);
+  }, [bgPanelOpen]);
 
   // ---- keyboard shortcuts: delete/backspace removes the selected piece, cmd/ctrl+z undoes ----
   useEffect(() => {
@@ -436,14 +542,70 @@ export default function CacheBoard() {
           onChange={(e) => e.target.files && handleFiles(e.target.files)}
         />
 
-        <div className={styles.patchPicker}>
-          <span className={`${styles.patchLabel} ${styles.hideOnMobile}`}>patch</span>
-          <input
-            type="color"
-            value={canvasBg}
-            onChange={(e) => setCanvasBg(e.target.value)}
-            className={styles.colorInput}
-          />
+        <div style={{ position: "relative" }}>
+          <button
+            ref={bgButtonRef}
+            onClick={() => setBgPanelOpen((v) => !v)}
+            className={styles.btn}
+          >
+            <span className={styles.hideOnMobile}>patch</span>
+            <span
+              aria-hidden="true"
+              style={{
+                width: 14,
+                height: 14,
+                border: "1px solid rgba(236,231,219,0.5)",
+                background: canvasImage ? `url(${canvasImage}) center/cover` : canvasBg,
+              }}
+            />
+          </button>
+
+          {bgPanelOpen && (
+            <div ref={bgPanelRef} className={styles.bgPanel}>
+              <div className={styles.bgPanelLabel}>fill</div>
+              <input
+                type="color"
+                value={canvasBg}
+                onChange={(e) => setCanvasBg(e.target.value)}
+                className={styles.colorInputSm}
+              />
+
+              <div className={styles.bgPanelLabel}>pattern</div>
+              <div className={styles.bgPatternRow}>
+                {PATTERNS.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setCanvasPattern(p.id)}
+                    className={`${styles.bgPatternBtn} ${canvasPattern === p.id ? styles.bgPatternBtnActive : ""}`}
+                    title={p.label}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className={styles.bgPanelLabel}>background image</div>
+              {canvasImage ? (
+                <div className={styles.bgImagePreviewRow}>
+                  <div className={styles.bgImagePreview} style={{ backgroundImage: `url(${canvasImage})` }} />
+                  <button onClick={() => setCanvasImage(null)} className={styles.smallBtn}>
+                    remove
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => bgImageInputRef.current?.click()} className={styles.smallBtn}>
+                  upload image
+                </button>
+              )}
+              <input
+                ref={bgImageInputRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => e.target.files?.[0] && handleBgImage(e.target.files[0])}
+              />
+            </div>
+          )}
         </div>
 
         <div className={styles.toolbarEnd}>
@@ -474,7 +636,10 @@ export default function CacheBoard() {
               style={{
                 width: BOARD_W,
                 height: BOARD_H,
-                background: canvasBg,
+                backgroundColor: canvasBg,
+                ...(canvasImage
+                  ? { backgroundImage: `url(${canvasImage})`, backgroundSize: "cover", backgroundPosition: "center" }
+                  : patternCSS(canvasPattern)),
                 position: "relative",
                 boxShadow: "0 0 0 1px rgba(236,231,219,0.08), 0 12px 40px rgba(0,0,0,0.35)",
                 transform: `scale(${scale})`,

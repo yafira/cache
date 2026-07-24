@@ -89,6 +89,10 @@ thumbnail.
 - **no stashes yet** — this starter is a single patch with no organizational layer above it.
   a `stashes` table (id, name, owner) with a `patch_id -> stash_id` foreign key is the natural
   shape once patches need grouping.
+- **background images make the share-link hash very long.** The URL-hash sharing trick already had
+  a size ceiling; a background image (base64-encoded) makes that much more likely to matter. This is
+  the clearest sign it's time to move share-links to a real `boards` table + short id (see above)
+  rather than pushing the hash approach further.
 - **share link has no backend.** it packs the whole board into the URL hash as base64 JSON, so it
   round-trips with zero infrastructure but the link gets long and won't survive across
   devices/browsers cleanly. swap in: a `boards` table, a random board id + a separate edit-token,

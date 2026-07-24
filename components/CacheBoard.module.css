@@ -77,29 +77,8 @@
   transform: scale(0.9);
 }
 
-.patchPicker {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border: 1px solid rgba(236, 231, 219, 0.3);
-}
 
-.patchLabel {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(236, 231, 219, 0.5);
-}
 
-.colorInput {
-  width: 24px;
-  height: 24px;
-  border: 1px solid rgba(236, 231, 219, 0.4);
-  cursor: pointer;
-  background: transparent;
-  padding: 0;
-}
 
 .colorInputSm {
   width: 100%;
@@ -306,4 +285,69 @@
 }
 .frontBackBtn:hover {
   border-color: #ece7db;
+}
+
+.bgPanel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 220px;
+  background: #1c1b19;
+  border: 1px solid rgba(236, 231, 219, 0.3);
+  padding: 12px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bgPanelLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(236, 231, 219, 0.5);
+  margin-top: 8px;
+}
+.bgPanelLabel:first-child {
+  margin-top: 0;
+}
+
+.bgPatternRow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.bgPatternBtn {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 6px 8px;
+  border: 1px solid rgba(236, 231, 219, 0.3);
+  color: rgba(236, 231, 219, 0.75);
+  background: none;
+  cursor: pointer;
+}
+.bgPatternBtn:hover {
+  border-color: #ece7db;
+}
+.bgPatternBtnActive {
+  background: #ece7db;
+  color: #1c1b19;
+  border-color: #ece7db;
+}
+
+.bgImagePreviewRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bgImagePreview {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(236, 231, 219, 0.3);
+  background-size: cover;
+  background-position: center;
+  flex-shrink: 0;
 }
