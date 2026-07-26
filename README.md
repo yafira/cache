@@ -2,6 +2,24 @@
 
 a moodboard tool that pastes, drags, and styles like you actually think — no figma detour required.
 
+## screenshots
+
+<!--
+  Drop real captures here before this goes anywhere public — right now these are placeholders.
+  Suggested shots, in this order:
+  1. Empty patch, cursor mid-paste, first card landing
+  2. A card selected, floating style panel open, color picker mid-drag
+  3. A link card + a PDF file card side by side on the patch
+  4. The font picker open on a text piece
+  5. Full patch at real size — toolbar, canvas, floating panel, all visible
+-->
+
+![empty patch, mid-paste](./docs/screenshot-01-paste.png)
+![style panel + color picker](./docs/screenshot-02-style-panel.png)
+![link and file cards](./docs/screenshot-03-link-file-cards.png)
+![font picker](./docs/screenshot-04-font-picker.png)
+![full patch at real size](./docs/screenshot-05-full-patch.png)
+
 ## running it
 
 ```bash
@@ -13,11 +31,20 @@ then open http://localhost:3000
 
 ## what's in here
 
-- `app/layout.js` — loads Pixelify Sans (display) + IBM Plex Mono (everything else) via `next/font/google`, no external `@import` or flash of unstyled text
+- `app/layout.js` — loads Space Grotesk (display) + IBM Plex Mono (everything else), plus four more
+  preset fonts (Playfair Display, Inter, Caveat, JetBrains Mono) for the in-app font picker, all via
+  `next/font/google` — no external `@import`, no flash of unstyled text
 - `app/page.js` — renders the board
-- `components/CacheBoard.jsx` — the whole tool: paste-to-add, drag, resize, per-piece styling (fill, corner radius, rotation, opacity, layer order), canvas background, PNG export, and a shareable link
+- `app/case-study/` — the full write-up of the build (problem, positioning, naming, visual direction,
+  real bugs, the AGPL catch)
+- `app/api/unfurl/route.js` — server-side link unfurling (og:title/og:image extraction)
+- `components/CacheBoard.jsx` — the whole tool: paste-to-add, drag, resize, per-piece styling (fill,
+  font, corner radius, rotation, opacity, layer order), canvas background (color/pattern/image), PNG/
+  PDF/HTML export, and a shareable link
 - `components/CacheBoard.module.css` — all the styling, as plain CSS Modules (no Tailwind)
-- `app/globals.css` — tailwind + the `.fg-brand` class for the display face
+- `components/ColorPicker.jsx` — the custom in-app color picker (saturation/hue popover), replacing
+  the browser's native color dialog
+- `app/globals.css` — a small reset plus the `.fg-brand` class for the display face
 
 ## vocabulary
 
@@ -88,6 +115,31 @@ captures of the running app once it's deployed.
 
 ## known limits of this starter (the real v2 list)
 
+- **auto-saves to localStorage, per browser only.** Refreshing the page recovers your last patch —
+  no more losing work on an accidental reload. This is _not_ shared, synced across devices, or
+  backed by any server: it's purely "this browser remembers what was open last." The share link is
+  still the only way to hand a patch to someone else, and it's a one-time snapshot, not a live
+  document — editing after sharing doesn't update the link you already sent.
+- **patch backgrounds now include two shape-based patterns** (blob, flower) alongside the existing
+  dots/grid/diagonal, each rendered as an inline SVG for the live board and a matching canvas tile
+  for export parity. The toolbar's patch icon and the pattern picker buttons both show a live preview
+  of the actual pattern now, instead of always showing a flat color swatch.
+- **freeform/custom pattern drawing isn't built** — genuinely a bigger feature (a small drawing/brush
+  tool, not just another preset) than the others here, so it's left as a real "not yet" rather than
+  a half-built stub.
+
+- **text pieces now have a font picker** — six presets (mono, display, serif, sans, handwritten,
+  mono alt), all self-hosted via `next/font/google` in `app/layout.js` so there's no flash of
+  unstyled text in the live app. There's also a "+ upload" option for a custom font file
+  (`.woff`/`.woff2`/`.ttf`/`.otf`) — it's injected as a real `@font-face` rule and becomes usable on
+  any text piece, not just the one it was uploaded for.
+- **font rendering is now consistent across the live app and every export.** Canvas-based exports
+  (PNG, PDF) call `document.fonts.load()` before drawing text so the chosen font is actually ready,
+  instead of silently falling back to a generic monospace like the very first version of export did.
+  The HTML export pulls preset fonts from the Google Fonts CDN (no `next/font` outside the live app)
+  and embeds custom uploaded fonts directly as `@font-face` with their real bytes, so that export
+  stays fully self-contained.
+
 - **the download button now offers two formats.** PNG is the flat visual snapshot (what it always
   did). HTML exports a single self-contained file where link cards stay real `<a href>` tags and
   file cards stay real openable/downloadable links — genuinely functional, not just a picture of a
@@ -154,8 +206,6 @@ captures of the running app once it's deployed.
   and the link becomes `/b/{id}`. same no-account-required UX, real persistence.
 - **no accounts yet** — the guest-edit-token pattern above is what makes "save it later" possible
   without forcing signup up front.
-- **no auto-unfurling yet** — pasting a URL currently creates a plain text card; the `/api/unfurl`
-  route above is what turns a GitHub/YouTube/Spotify/generic link into a real preview card.
 - **connections/flows between pieces** were intentionally left out of this pass — good v2 candidate
   once the core paste → style → export loop is validated with real use.
 - **image storage** is currently inline as base64 in the JSON — fine for a single board, move to

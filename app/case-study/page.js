@@ -72,7 +72,7 @@ export default function CaseStudy() {
               height="36"
               rx="2"
               fill="none"
-              stroke="#c9bce0"
+              stroke="#0d0d0c"
               strokeWidth="1.4"
               strokeDasharray="2 3"
               strokeLinecap="round"
@@ -86,7 +86,7 @@ export default function CaseStudy() {
               <path
                 key={i}
                 d={`M${cx - 3},${cy} L${cx + 3},${cy} M${cx},${cy - 3} L${cx},${cy + 3}`}
-                stroke="#c9bce0"
+                stroke="#0d0d0c"
                 strokeWidth="1.3"
               />
             ))}
@@ -96,10 +96,10 @@ export default function CaseStudy() {
               textAnchor="middle"
               fontFamily="var(--font-mono)"
               fontSize="11"
-              fill="#c9bce0"
+              fill="#0d0d0c"
               letterSpacing="0.02em"
             >
-              ⌘V
+              ⌘v
             </text>
           </svg>
         </div>
@@ -176,9 +176,13 @@ export default function CaseStudy() {
                 <div className={styles.flowStepTitle}>arrange and style it</div>
                 <p className={styles.prose}>
                   drag to move, drag the corner dot to resize, double-click text
-                  to edit. select a piece and the style panel opens: fill color
-                  (custom in-app picker, not the browser's native color dialog),
-                  corner radius, rotation, opacity, layer order.
+                  to edit. select a piece and a style panel floats in — it isn't
+                  a permanent sidebar, so the patch keeps the full page to
+                  itself until something's actually selected. fill color uses a
+                  custom in-app picker instead of the browser's native color
+                  dialog; text pieces get a font picker (six presets plus your
+                  own uploaded font file); every piece gets corner radius,
+                  rotation, opacity, and layer order.
                 </p>
               </div>
             </div>
@@ -379,7 +383,7 @@ export default function CaseStudy() {
                 />
                 <div
                   className={styles.evolutionSwatch}
-                  style={{ background: "#e7e2d6" }}
+                  style={{ background: "#f8f6f0" }}
                 />
                 <div
                   className={styles.evolutionSwatch}
@@ -412,7 +416,7 @@ export default function CaseStudy() {
             <div className={styles.miniSwatchRow}>
               <div
                 className={styles.miniSwatch}
-                style={{ background: "#e7e2d6" }}
+                style={{ background: "#f8f6f0" }}
               />
               <div
                 className={styles.miniSwatch}
@@ -464,8 +468,8 @@ export default function CaseStudy() {
               </div>
               <div className={styles.refCardNote}>
                 absence as identity. the patch mark carries no logo — just white
-                fabric, lavender stitching, and a small embroidered ⌘v as the
-                one wink at what the tool does.
+                fabric, black stitching, and a small embroidered ⌘v as the one
+                wink at what the tool does.
               </div>
             </div>
             <div className={styles.refCard}>
@@ -643,21 +647,43 @@ export default function CaseStudy() {
                 an arbitrary third-party page directly.
               </div>
             </div>
+            <div className={styles.stackRow}>
+              <div className={styles.stackKey}>export</div>
+              <div className={styles.stackVal}>
+                one shared canvas-rendering function powers both png and pdf
+                export; pdf adds real clickable link annotations on top via
+                jspdf (mit licensed). html export embeds everything — images,
+                files, custom fonts — as a single self-contained file.
+              </div>
+            </div>
+            <div className={styles.stackRow}>
+              <div className={styles.stackKey}>fonts</div>
+              <div className={styles.stackVal}>
+                six presets self-hosted via <code>next/font/google</code>, plus
+                custom font upload (woff/woff2/ttf/otf) injected as real{" "}
+                <code>@font-face</code> rules. canvas exports call{" "}
+                <code>document.fonts.load()</code> before drawing so the export
+                always matches what's on screen.
+              </div>
+            </div>
           </div>
         </section>
 
         {/* 09 — what's next */}
         <section className={styles.section}>
-          <div className={styles.sectionNumber}>09 — what's next</div>
+          <div className={styles.sectionNumber}>
+            09 — edge cases and what's next
+          </div>
           <h2 className={styles.sectionTitle}>the honest roadmap</h2>
           <p className={styles.prose}>
-            resolve the agpl question before anything public. move sharing off
-            the url hash and onto real storage once boards start carrying real
-            files. add stashes — the folder layer above a single patch — once
-            the core paste-arrange-export loop has been used by more than one
-            person. multi-select and group-move are worth having before stashes
-            are. connections and flows between pieces stay explicitly out of
-            scope until the basic loop is proven.
+            not yet built, on purpose: multi-select and group-move for arranging
+            more than one piece at a time; stashes, the folder layer above a
+            single patch, once the core loop has been used by more than one
+            person; connections and flows between pieces, which stay explicitly
+            out of scope until the basic loop is proven. resolve the agpl
+            question on background removal before anything goes public. move
+            sharing off the url hash and onto real storage once boards start
+            carrying real files.
           </p>
         </section>
       </div>

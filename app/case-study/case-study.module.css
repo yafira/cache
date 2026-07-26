@@ -1,5 +1,5 @@
 .page {
-  background: #e7e2d6;
+  background: #f8f6f0;
   color: #0d0d0c;
   min-height: 100vh;
 }
@@ -162,7 +162,7 @@
   margin-top: 24px;
 }
 .vocabCell {
-  background: #e7e2d6;
+  background: #f8f6f0;
   padding: 16px;
 }
 .vocabGeneric {
@@ -465,7 +465,7 @@
 }
 .ctaLink:hover {
   background: #0d0d0c;
-  color: #e7e2d6;
+  color: #f8f6f0;
 }
 .ctaLinkPrimary {
   background: #f5e6a8;

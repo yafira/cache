@@ -27,7 +27,7 @@ const MOBILE_BREAKPOINT = 768;
 // monochrome chrome + three pastel accents, each doing exactly one job —
 // lavender marks selection, butter marks the primary action, pink marks resize
 const INK = "#0d0d0c";
-const BONE = "#e7e2d6";
+const BONE = "#f8f6f0";
 const CONCRETE = "#8f8b81";
 const GRAPHITE = "#1c1b19";
 const BONE_TEXT = "#ece7db";
@@ -47,6 +47,45 @@ const PATTERNS = [
   { id: "dots", label: "dots" },
   { id: "grid", label: "grid" },
   { id: "diagonal", label: "diagonal" },
+  { id: "blob", label: "blob" },
+  { id: "flower", label: "flower" },
+];
+
+// text font presets — cssVar drives the live contentEditable (via next/font,
+// no flash of unstyled text), family is the real font name used for canvas
+// drawing (PNG/PDF export) and document.fonts.load() readiness checks
+const FONT_PRESETS = [
+  {
+    id: "mono",
+    label: "mono",
+    cssVar: "var(--font-mono)",
+    family: "IBM Plex Mono",
+  },
+  {
+    id: "display",
+    label: "display",
+    cssVar: "var(--font-display)",
+    family: "Space Grotesk",
+  },
+  {
+    id: "serif",
+    label: "serif",
+    cssVar: "var(--font-serif)",
+    family: "Playfair Display",
+  },
+  { id: "sans", label: "sans", cssVar: "var(--font-sans)", family: "Inter" },
+  {
+    id: "hand",
+    label: "handwritten",
+    cssVar: "var(--font-hand)",
+    family: "Caveat",
+  },
+  {
+    id: "monoAlt",
+    label: "mono alt",
+    cssVar: "var(--font-mono-alt)",
+    family: "JetBrains Mono",
+  },
 ];
 
 // CSS for the live board — used only when there's no background image set
@@ -70,6 +109,31 @@ function patternCSS(patternId) {
           "repeating-linear-gradient(45deg, rgba(13,13,12,0.14) 0 1.5px, transparent 1.5px 14px)",
         backgroundSize: "auto",
       };
+    case "blob": {
+      const svg =
+        "<svg xmlns='http://www.w3.org/2000/svg' width='44' height='44'>" +
+        "<path d='M22,10 C28,10 33,14 33,21 C33,28 28,33 21,33 C14,33 9,28 9,21 C9,14 15,10 22,10 Z' fill='rgba(13,13,12,0.14)'/>" +
+        "</svg>";
+      return {
+        backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(svg)}")`,
+        backgroundSize: "44px 44px",
+      };
+    }
+    case "flower": {
+      const svg =
+        "<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48'>" +
+        "<circle cx='32' cy='24' r='5' fill='rgba(13,13,12,0.13)'/>" +
+        "<circle cx='26.5' cy='31.6' r='5' fill='rgba(13,13,12,0.13)'/>" +
+        "<circle cx='17.5' cy='28.7' r='5' fill='rgba(13,13,12,0.13)'/>" +
+        "<circle cx='17.5' cy='19.3' r='5' fill='rgba(13,13,12,0.13)'/>" +
+        "<circle cx='26.5' cy='16.4' r='5' fill='rgba(13,13,12,0.13)'/>" +
+        "<circle cx='24' cy='24' r='4' fill='rgba(13,13,12,0.18)'/>" +
+        "</svg>";
+      return {
+        backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(svg)}")`,
+        backgroundSize: "48px 48px",
+      };
+    }
     default:
       return {};
   }
@@ -78,7 +142,16 @@ function patternCSS(patternId) {
 // same patterns, rendered as a small tile for canvas export via createPattern —
 // keeps the exported PNG matching what's on screen
 function makePatternTile(patternId) {
-  const size = patternId === "diagonal" ? 28 : patternId === "grid" ? 28 : 18;
+  const size =
+    patternId === "flower"
+      ? 48
+      : patternId === "blob"
+        ? 44
+        : patternId === "diagonal"
+          ? 28
+          : patternId === "grid"
+            ? 28
+            : 18;
   const tile = document.createElement("canvas");
   tile.width = size;
   tile.height = size;
@@ -105,6 +178,34 @@ function makePatternTile(patternId) {
     tctx.moveTo(0, size);
     tctx.lineTo(size, 0);
     tctx.stroke();
+  } else if (patternId === "blob") {
+    tctx.fillStyle = "rgba(13,13,12,0.14)";
+    tctx.beginPath();
+    tctx.moveTo(22, 10);
+    tctx.bezierCurveTo(28, 10, 33, 14, 33, 21);
+    tctx.bezierCurveTo(33, 28, 28, 33, 21, 33);
+    tctx.bezierCurveTo(14, 33, 9, 28, 9, 21);
+    tctx.bezierCurveTo(9, 14, 15, 10, 22, 10);
+    tctx.closePath();
+    tctx.fill();
+  } else if (patternId === "flower") {
+    const petals = [
+      [32, 24],
+      [26.5, 31.6],
+      [17.5, 28.7],
+      [17.5, 19.3],
+      [26.5, 16.4],
+    ];
+    tctx.fillStyle = "rgba(13,13,12,0.13)";
+    petals.forEach(([cx, cy]) => {
+      tctx.beginPath();
+      tctx.arc(cx, cy, 5, 0, Math.PI * 2);
+      tctx.fill();
+    });
+    tctx.fillStyle = "rgba(13,13,12,0.18)";
+    tctx.beginPath();
+    tctx.arc(24, 24, 4, 0, Math.PI * 2);
+    tctx.fill();
   }
   return tile;
 }
@@ -147,6 +248,9 @@ export default function CacheBoard() {
   const [bgPanelOpen, setBgPanelOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [bgRemovalId, setBgRemovalId] = useState(null);
+  const [customFonts, setCustomFonts] = useState([]); // [{ id, label, family, dataUrl }]
+  const fontUploadInputRef = useRef(null);
+  const customFontStyleRef = useRef(null);
   const [bgRemovalError, setBgRemovalError] = useState(null);
   const [linkPanelOpen, setLinkPanelOpen] = useState(false);
   const [linkInputValue, setLinkInputValue] = useState("");
@@ -229,12 +333,51 @@ export default function CacheBoard() {
           );
           zCounter.current = maxZ + 1;
           idCounter = decoded.elements.length + 1;
+          return;
+        }
+      }
+      // no share link — recover the last auto-saved session for this browser,
+      // if there is one
+      const saved = localStorage.getItem("cache:lastPatch");
+      if (saved) {
+        const decoded = JSON.parse(saved);
+        if (decoded?.elements?.length) {
+          setElements(decoded.elements);
+          setCanvasBg(decoded.canvasBg || BONE);
+          setCanvasPattern(decoded.canvasPattern || "none");
+          setCanvasImage(decoded.canvasImage || null);
+          const maxZ = Math.max(
+            1,
+            ...decoded.elements.map((e) => e.zIndex || 1),
+          );
+          zCounter.current = maxZ + 1;
+          idCounter = decoded.elements.length + 1;
         }
       }
     } catch (e) {
-      // ignore malformed hash
+      // ignore malformed hash or corrupted local save
     }
   }, []);
+
+  // auto-save to localStorage so a refresh doesn't lose the patch — this is
+  // per-browser only (not shared, not synced across devices); the share link
+  // is still the only way to hand a patch to someone else
+  const autosaveTimer = useRef(null);
+  useEffect(() => {
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          "cache:lastPatch",
+          JSON.stringify({ elements, canvasBg, canvasPattern, canvasImage }),
+        );
+      } catch (e) {
+        // storage full or unavailable — silently skip, the app still works
+        // for the current session, it just won't survive a refresh
+      }
+    }, 500);
+    return () => clearTimeout(autosaveTimer.current);
+  }, [elements, canvasBg, canvasPattern, canvasImage]);
 
   const addElement = useCallback((el) => {
     zCounter.current += 1;
@@ -263,6 +406,7 @@ export default function CacheBoard() {
       h: 100,
       text: "double-tap to edit",
       fontSize: 18,
+      fontFamily: "mono",
       textColor: INK,
       bg: "transparent",
     });
@@ -384,6 +528,49 @@ export default function CacheBoard() {
     });
   };
 
+  // resolves a text element's fontFamily (a preset id, or "custom:<id>")
+  // into { cssVar, family } — cssVar for live rendering, family for canvas
+  // export and document.fonts.load()
+  const resolveFont = (fontFamily) => {
+    if (fontFamily?.startsWith("custom:")) {
+      const id = fontFamily.slice(7);
+      const custom = customFonts.find((f) => f.id === id);
+      if (custom)
+        return { cssVar: `"${custom.family}"`, family: custom.family };
+    }
+    const preset =
+      FONT_PRESETS.find((f) => f.id === fontFamily) || FONT_PRESETS[0];
+    return { cssVar: preset.cssVar, family: preset.family };
+  };
+
+  const addCustomFont = (file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      const id = `f${Date.now()}`;
+      const family = `CustomFont${id}`;
+      const label = file.name.replace(/\.(woff2?|ttf|otf)$/i, "").slice(0, 20);
+
+      if (!customFontStyleRef.current) {
+        const styleEl = document.createElement("style");
+        styleEl.id = "cache-custom-fonts";
+        document.head.appendChild(styleEl);
+        customFontStyleRef.current = styleEl;
+      }
+      customFontStyleRef.current.appendChild(
+        document.createTextNode(
+          `@font-face { font-family: "${family}"; src: url(${dataUrl}); }`,
+        ),
+      );
+
+      setCustomFonts((prev) => [...prev, { id, label, family, dataUrl }]);
+      if (selected?.id)
+        updateElement(selected.id, { fontFamily: `custom:${id}` });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleBgImage = (file) => {
     if (!file || !file.type.startsWith("image/")) return;
     const reader = new FileReader();
@@ -459,6 +646,7 @@ export default function CacheBoard() {
               h: 110,
               text: trimmed.slice(0, 400),
               fontSize: 16,
+              fontFamily: "mono",
               textColor: INK,
               bg: "#ffffff",
             });
@@ -610,16 +798,17 @@ export default function CacheBoard() {
           ctx.fill();
         }
         ctx.fillStyle = el.textColor || INK;
-        ctx.font = `${el.fontSize || 16}px ui-monospace, monospace`;
+        const fontSize = el.fontSize || 16;
+        const { family } = resolveFont(el.fontFamily);
+        try {
+          await document.fonts.load(`${fontSize}px "${family}"`);
+        } catch {
+          // font failed to load in time — canvas falls back to its default,
+          // better than throwing and aborting the whole export
+        }
+        ctx.font = `${fontSize}px "${family}", ui-monospace, monospace`;
         ctx.textBaseline = "top";
-        wrapText(
-          ctx,
-          el.text || "",
-          14,
-          14,
-          el.w - 28,
-          (el.fontSize || 16) * 1.35,
-        );
+        wrapText(ctx, el.text || "", 14, 14, el.w - 28, fontSize * 1.35);
       } else if (el.type === "link") {
         ctx.fillStyle = "#ffffff";
         roundRectPath(ctx, 0, 0, el.w, el.h, el.radius || 0);
@@ -764,6 +953,48 @@ export default function CacheBoard() {
       (a, b) => (a.zIndex || 0) - (b.zIndex || 0),
     );
 
+    // figure out which fonts are actually used, so the export only loads
+    // what it needs — presets go through the Google Fonts CDN (no next/font
+    // available in a standalone file), custom uploads get their real bytes
+    // embedded directly so the file stays self-contained
+    const usedPresetIds = new Set();
+    const usedCustomIds = new Set();
+    sorted.forEach((el) => {
+      if (el.type !== "text") return;
+      const ff = el.fontFamily || "mono";
+      if (ff.startsWith("custom:")) usedCustomIds.add(ff.slice(7));
+      else usedPresetIds.add(ff);
+    });
+
+    const GOOGLE_FONT_PARAMS = {
+      mono: "IBM+Plex+Mono:wght@400;500;600",
+      display: "Space+Grotesk:wght@500;600;700",
+      serif: "Playfair+Display:wght@400;600",
+      sans: "Inter:wght@400;600",
+      hand: "Caveat:wght@500;700",
+      monoAlt: "JetBrains+Mono:wght@400;600",
+    };
+    const googleFontsLink =
+      usedPresetIds.size > 0
+        ? `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${[
+            ...usedPresetIds,
+          ]
+            .map(
+              (id) =>
+                `family=${GOOGLE_FONT_PARAMS[id] || GOOGLE_FONT_PARAMS.mono}`,
+            )
+            .join("&")}&display=swap" />`
+        : "";
+
+    const customFontFaces = [...usedCustomIds]
+      .map((id) => customFonts.find((f) => f.id === id))
+      .filter(Boolean)
+      .map(
+        (f) =>
+          `@font-face { font-family: "${f.family}"; src: url(${f.dataUrl}); }`,
+      )
+      .join("\n");
+
     const pieces = sorted
       .map((el) => {
         const common = `position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;transform:rotate(${
@@ -779,7 +1010,8 @@ export default function CacheBoard() {
         if (el.type === "text") {
           const textBg =
             el.bg && el.bg !== "transparent" ? el.bg : "transparent";
-          return `<div style="${common}background:${textBg};padding:14px;font-family:ui-monospace,monospace;font-size:${
+          const { family } = resolveFont(el.fontFamily);
+          return `<div style="${common}background:${textBg};padding:14px;font-family:'${family}',ui-monospace,monospace;font-size:${
             el.fontSize || 16
           }px;color:${el.textColor || INK};white-space:pre-wrap;word-break:break-word;">${escapeHtml(el.text)}</div>`;
         }
@@ -810,7 +1042,11 @@ export default function CacheBoard() {
 <head>
 <meta charset="UTF-8" />
 <title>cache — patch export</title>
-<style>* { box-sizing: border-box; } body { margin: 0; padding: 24px; background: #1c1b19; display: flex; justify-content: center; }</style>
+${googleFontsLink}
+<style>
+* { box-sizing: border-box; } body { margin: 0; padding: 24px; background: #1c1b19; display: flex; justify-content: center; }
+${customFontFaces}
+</style>
 </head>
 <body>
   <div style="position:relative;width:${BOARD_W}px;height:${BOARD_H}px;${bg}box-shadow:0 12px 40px rgba(0,0,0,0.35);">
@@ -1036,6 +1272,16 @@ export default function CacheBoard() {
             e.target.value = "";
           }}
         />
+        <input
+          ref={fontUploadInputRef}
+          type="file"
+          accept=".woff,.woff2,.ttf,.otf"
+          hidden
+          onChange={(e) => {
+            if (e.target.files?.[0]) addCustomFont(e.target.files[0]);
+            e.target.value = "";
+          }}
+        />
 
         <div style={{ position: "relative" }}>
           <button
@@ -1050,9 +1296,17 @@ export default function CacheBoard() {
                 width: 14,
                 height: 14,
                 border: "1px solid rgba(236,231,219,0.5)",
-                background: canvasImage
-                  ? `url(${canvasImage}) center/cover`
-                  : canvasBg,
+                backgroundColor: canvasBg,
+                ...(canvasImage
+                  ? {
+                      backgroundImage: `url(${canvasImage})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }
+                  : {
+                      ...patternCSS(canvasPattern),
+                      backgroundSize: "14px 14px",
+                    }),
               }}
             />
           </button>
@@ -1075,6 +1329,22 @@ export default function CacheBoard() {
                     className={`${styles.bgPatternBtn} ${canvasPattern === p.id ? styles.bgPatternBtnActive : ""}`}
                     title={p.label}
                   >
+                    {p.id !== "none" && (
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          display: "inline-block",
+                          width: 12,
+                          height: 12,
+                          marginRight: 5,
+                          verticalAlign: "-2px",
+                          backgroundColor: "#fff",
+                          border: "1px solid rgba(13,13,12,0.3)",
+                          ...patternCSS(p.id),
+                          backgroundSize: "12px 12px",
+                        }}
+                      />
+                    )}
                     {p.label}
                   </button>
                 ))}
@@ -1256,7 +1526,7 @@ export default function CacheBoard() {
                 </div>
               )}
 
-              {/* a patch, literally — white fabric, lavender stitching (same lavender that marks selection elsewhere), a tiny embroidered ⌘V as the one wink at what this thing actually does */}
+              {/* a patch, literally — white fabric, black stitching, a tiny embroidered ⌘v as the one wink at what this thing actually does */}
               <svg
                 width="64"
                 height="44"
@@ -1288,7 +1558,7 @@ export default function CacheBoard() {
                   height="30"
                   rx="2"
                   fill="none"
-                  stroke={LAVENDER}
+                  stroke={INK}
                   strokeWidth="1.4"
                   strokeDasharray="2 3"
                   strokeLinecap="round"
@@ -1303,7 +1573,7 @@ export default function CacheBoard() {
                   <path
                     key={i}
                     d={`M${cx - 3},${cy} L${cx + 3},${cy} M${cx},${cy - 3} L${cx},${cy + 3}`}
-                    stroke={LAVENDER}
+                    stroke={INK}
                     strokeWidth="1.3"
                   />
                 ))}
@@ -1314,10 +1584,10 @@ export default function CacheBoard() {
                   textAnchor="middle"
                   fontFamily="var(--font-mono)"
                   fontSize="10"
-                  fill={LAVENDER}
+                  fill={INK}
                   letterSpacing="0.02em"
                 >
-                  ⌘V
+                  ⌘v
                 </text>
               </svg>
 
@@ -1423,7 +1693,7 @@ export default function CacheBoard() {
                             cursor: editingId === el.id ? "text" : "grab",
                             whiteSpace: "pre-wrap",
                             wordBreak: "break-word",
-                            fontFamily: "var(--font-mono)",
+                            fontFamily: resolveFont(el.fontFamily).cssVar,
                           }}
                         >
                           {el.text}
@@ -1527,6 +1797,8 @@ export default function CacheBoard() {
               restoreImageBackground={restoreImageBackground}
               bgRemovalId={bgRemovalId}
               bgRemovalError={bgRemovalError}
+              customFonts={customFonts}
+              fontUploadInputRef={fontUploadInputRef}
             />
           </div>
         )}
@@ -1560,6 +1832,8 @@ export default function CacheBoard() {
               restoreImageBackground={restoreImageBackground}
               bgRemovalId={bgRemovalId}
               bgRemovalError={bgRemovalError}
+              customFonts={customFonts}
+              fontUploadInputRef={fontUploadInputRef}
             />
           </div>
         )}
@@ -1635,6 +1909,8 @@ function StylePanelContent({
   restoreImageBackground,
   bgRemovalId,
   bgRemovalError,
+  customFonts,
+  fontUploadInputRef,
 }) {
   return (
     <>
@@ -1725,6 +2001,49 @@ function StylePanelContent({
               }
             />
           </label>
+          <div className={styles.field}>
+            font
+            <div className={styles.bgPatternRow}>
+              {FONT_PRESETS.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() =>
+                    updateElement(selected.id, { fontFamily: f.id })
+                  }
+                  style={{ fontFamily: f.cssVar }}
+                  className={`${styles.bgPatternBtn} ${
+                    (selected.fontFamily || "mono") === f.id
+                      ? styles.bgPatternBtnActive
+                      : ""
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+              {customFonts.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() =>
+                    updateElement(selected.id, { fontFamily: `custom:${f.id}` })
+                  }
+                  style={{ fontFamily: `"${f.family}"` }}
+                  className={`${styles.bgPatternBtn} ${
+                    selected.fontFamily === `custom:${f.id}`
+                      ? styles.bgPatternBtnActive
+                      : ""
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+              <button
+                onClick={() => fontUploadInputRef.current?.click()}
+                className={styles.bgPatternBtn}
+              >
+                + upload
+              </button>
+            </div>
+          </div>
           <button
             onClick={() =>
               updateElement(selected.id, {
