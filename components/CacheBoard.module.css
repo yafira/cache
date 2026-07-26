@@ -38,7 +38,9 @@
   color: rgba(236, 231, 219, 0.85);
   background: transparent;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 .btn:hover {
   background: #ece7db;
@@ -75,18 +77,6 @@
 }
 .swatchDot:active {
   transform: scale(0.9);
-}
-
-
-
-
-.colorInputSm {
-  width: 100%;
-  height: 32px;
-  border: 1px solid rgba(236, 231, 219, 0.3);
-  cursor: pointer;
-  background: transparent;
-  padding: 0;
 }
 
 .toolbarEnd {
@@ -157,31 +147,37 @@
 }
 
 .panel {
-  width: 256px;
-  border-left: 1px solid rgba(236, 231, 219, 0.15);
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 280px;
+  max-height: calc(100% - 32px);
   background: #1c1b19;
+  border: 1px solid rgba(236, 231, 219, 0.3);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
   padding: 16px;
   overflow-y: auto;
-  flex-shrink: 0;
+  z-index: 25;
 }
 
-.panelEmpty {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(236, 231, 219, 0.4);
-}
-
-.panelFooter {
-  margin-top: 32px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(236, 231, 219, 0.15);
-}
-
-.panelFooterText {
+.helpCorner {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 20;
+  max-width: 260px;
   font-size: 10px;
   color: rgba(236, 231, 219, 0.35);
   line-height: 1.6;
+  pointer-events: none;
+}
+.helpCorner a {
+  pointer-events: auto;
+  color: rgba(236, 231, 219, 0.6);
+  text-decoration: underline;
+}
+.helpCorner a:hover {
+  color: #ece7db;
 }
 
 .mobileSheet {

@@ -17,6 +17,7 @@ import {
   Paperclip,
 } from "lucide-react";
 import styles from "./CacheBoard.module.css";
+import ColorPicker from "./ColorPicker";
 
 // constants
 const BOARD_W = 1400;
@@ -31,7 +32,7 @@ const CONCRETE = "#8f8b81";
 const GRAPHITE = "#1c1b19";
 const BONE_TEXT = "#ece7db";
 const LAVENDER = "#c9bce0";
-const BUTTER = "#f2d675";
+const BUTTER = "#f5e6a8";
 const PINK = "#f0bfd0";
 
 const SWATCHES = [
@@ -548,7 +549,10 @@ export default function CacheBoard() {
   };
 
   // export to PNG (always renders at full BOARD_W/BOARD_H regardless of on-screen scale)
-  const handleExport = async () => {
+  // draws the whole board (background + every element) onto a fresh canvas.
+  // Shared by the PNG export and the PDF export, so the drawing logic only
+  // lives in one place.
+  const renderBoardCanvas = async () => {
     const canvas = document.createElement("canvas");
     canvas.width = BOARD_W;
     canvas.height = BOARD_H;
@@ -696,6 +700,11 @@ export default function CacheBoard() {
       ctx.restore();
     }
 
+    return canvas;
+  };
+
+  const handleExport = async () => {
+    const canvas = await renderBoardCanvas();
     canvas.toBlob((blob) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -704,6 +713,37 @@ export default function CacheBoard() {
       a.click();
       URL.revokeObjectURL(url);
     });
+  };
+
+  // export as a real PDF — the board is drawn as a raster image (same
+  // rendering as the PNG), then real clickable link annotations are laid on
+  // top for every link-type card, using jsPDF (MIT licensed). File cards stay
+  // visual-only here — embedding an openable attachment inside a PDF is a
+  // much heavier feature (PDF file-attachment annotations) than a link
+  // overlay, so that's a noted limitation, not a silent gap.
+  const handleExportPDF = async () => {
+    const canvas = await renderBoardCanvas();
+    const imgData = canvas.toDataURL("image/png");
+
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "px",
+      format: [BOARD_W, BOARD_H],
+      hotfixes: ["px_scaling"],
+    });
+
+    doc.addImage(imgData, "PNG", 0, 0, BOARD_W, BOARD_H);
+
+    elements
+      .filter((el) => el.type === "link" && el.url)
+      .forEach((el) => {
+        // link() ignores rotation — fine for the common case (most link
+        // cards aren't rotated), noted as a limitation for rotated ones
+        doc.link(el.x, el.y, el.w, el.h, { url: el.url });
+      });
+
+    doc.save("patch.pdf");
   };
 
   // export as a standalone HTML file — the "functional" export.
@@ -1020,11 +1060,10 @@ export default function CacheBoard() {
           {bgPanelOpen && (
             <div ref={bgPanelRef} className={styles.bgPanel}>
               <div className={styles.bgPanelLabel}>fill</div>
-              <input
-                type="color"
+              <ColorPicker
                 value={canvasBg}
-                onChange={(e) => setCanvasBg(e.target.value)}
-                className={styles.colorInputSm}
+                onChange={setCanvasBg}
+                label="patch fill"
               />
 
               <div className={styles.bgPanelLabel}>pattern</div>
@@ -1134,6 +1173,16 @@ export default function CacheBoard() {
                 >
                   HTML — links & files stay clickable
                 </button>
+                <button
+                  onClick={() => {
+                    handleExportPDF();
+                    setDownloadPanelOpen(false);
+                  }}
+                  className={styles.smallBtn}
+                  style={{ width: "100%" }}
+                >
+                  PDF — clickable links
+                </button>
               </div>
             )}
           </div>
@@ -1207,7 +1256,7 @@ export default function CacheBoard() {
                 </div>
               )}
 
-              {/* a patch, literally — no text, just fabric and stitching */}
+              {/* a patch, literally — white fabric, lavender stitching (same lavender that marks selection elsewhere), a tiny embroidered ⌘V as the one wink at what this thing actually does */}
               <svg
                 width="64"
                 height="44"
@@ -1220,14 +1269,14 @@ export default function CacheBoard() {
                   userSelect: "none",
                 }}
               >
-                {/* raw fabric edge */}
+                {/* fabric, edge kept dark for shape definition against the pale board */}
                 <rect
                   x="1"
                   y="1"
                   width="62"
                   height="42"
                   rx="3"
-                  fill="#d9cfb0"
+                  fill="#ffffff"
                   stroke={INK}
                   strokeWidth="1"
                 />
@@ -1239,11 +1288,10 @@ export default function CacheBoard() {
                   height="30"
                   rx="2"
                   fill="none"
-                  stroke={INK}
-                  strokeWidth="1.2"
+                  stroke={LAVENDER}
+                  strokeWidth="1.4"
                   strokeDasharray="2 3"
                   strokeLinecap="round"
-                  opacity="0.6"
                 />
                 {/* corner tack stitches */}
                 {[
@@ -1255,10 +1303,22 @@ export default function CacheBoard() {
                   <path
                     key={i}
                     d={`M${cx - 3},${cy} L${cx + 3},${cy} M${cx},${cy - 3} L${cx},${cy + 3}`}
-                    stroke={INK}
-                    strokeWidth="1"
+                    stroke={LAVENDER}
+                    strokeWidth="1.3"
                   />
                 ))}
+                {/* the embroidered detail */}
+                <text
+                  x="32"
+                  y="26"
+                  textAnchor="middle"
+                  fontFamily="var(--font-mono)"
+                  fontSize="10"
+                  fill={LAVENDER}
+                  letterSpacing="0.02em"
+                >
+                  ⌘V
+                </text>
               </svg>
 
               {/* HUD readout, opposite corner */}
@@ -1451,46 +1511,31 @@ export default function CacheBoard() {
           </div>
         </div>
 
-        {/* style panel: sidebar on desktop, bottom sheet on mobile */}
-        {!isMobile && (
+        {/* style panel: floats in on desktop when something's selected, bottom sheet on mobile */}
+        {!isMobile && selected && (
           <div className={styles.panel}>
-            {!selected ? (
-              <p className={styles.panelEmpty}>
-                select a piece in this patch to style it
-              </p>
-            ) : (
-              <StylePanelContent
-                selected={selected}
-                isMobile={isMobile}
-                updateElement={updateElement}
-                deleteElement={deleteElement}
-                setSelectedId={setSelectedId}
-                bringToFront={bringToFront}
-                sendToBack={sendToBack}
-                onAdjustStart={() => pushHistory(elements)}
-                removeImageBackground={removeImageBackground}
-                restoreImageBackground={restoreImageBackground}
-                bgRemovalId={bgRemovalId}
-                bgRemovalError={bgRemovalError}
-              />
-            )}
-            <div className={styles.panelFooter}>
-              <p className={styles.panelFooterText}>
-                paste images/text anywhere in the patch, drag the corner dot to
-                resize, double-click text to edit. "share link" packs the patch
-                into the URL itself so this works with no backend; swap in a
-                short patch id cached to a database for real persistence across
-                devices, with the same no-account-required flow.
-              </p>
-              <p className={styles.panelFooterText} style={{ marginTop: 10 }}>
-                <a
-                  href="/case-study"
-                  style={{ color: "inherit", textDecoration: "underline" }}
-                >
-                  how this was built ↗
-                </a>
-              </p>
-            </div>
+            <StylePanelContent
+              selected={selected}
+              isMobile={isMobile}
+              updateElement={updateElement}
+              deleteElement={deleteElement}
+              setSelectedId={setSelectedId}
+              bringToFront={bringToFront}
+              sendToBack={sendToBack}
+              onAdjustStart={() => pushHistory(elements)}
+              removeImageBackground={removeImageBackground}
+              restoreImageBackground={restoreImageBackground}
+              bgRemovalId={bgRemovalId}
+              bgRemovalError={bgRemovalError}
+            />
+          </div>
+        )}
+
+        {!isMobile && !selected && (
+          <div className={styles.helpCorner}>
+            paste anywhere on the patch, drag the corner dot to resize,
+            double-click text to edit.{" "}
+            <a href="/case-study">how this was built ↗</a>
           </div>
         )}
 
@@ -1645,32 +1690,28 @@ function StylePanelContent({
       )}
 
       {(selected.type === "color" || selected.type === "text") && (
-        <label className={styles.field}>
+        <div className={styles.field}>
           {selected.type === "color" ? "fill" : "background"}
-          <input
-            onPointerDown={onAdjustStart}
-            type="color"
+          <ColorPicker
             value={selected.bg === "transparent" ? "#ffffff" : selected.bg}
-            onChange={(e) => updateElement(selected.id, { bg: e.target.value })}
-            className={styles.colorInputSm}
+            onChange={(hex) => updateElement(selected.id, { bg: hex })}
+            onAdjustStart={onAdjustStart}
+            label="fill"
           />
-        </label>
+        </div>
       )}
 
       {selected.type === "text" && (
         <>
-          <label className={styles.field}>
+          <div className={styles.field}>
             text color
-            <input
-              onPointerDown={onAdjustStart}
-              type="color"
+            <ColorPicker
               value={selected.textColor || INK}
-              onChange={(e) =>
-                updateElement(selected.id, { textColor: e.target.value })
-              }
-              className={styles.colorInputSm}
+              onChange={(hex) => updateElement(selected.id, { textColor: hex })}
+              onAdjustStart={onAdjustStart}
+              label="text color"
             />
-          </label>
+          </div>
           <label className={styles.field}>
             font size — {selected.fontSize || 16}px
             <input

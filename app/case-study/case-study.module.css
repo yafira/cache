@@ -147,7 +147,7 @@
   font-weight: 600;
 }
 .table tr.tableSelf td {
-  background: #f2d675;
+  background: #f5e6a8;
   font-weight: 600;
 }
 
@@ -364,7 +364,7 @@
 /* callout (judgment calls, like the AGPL catch) */
 
 .callout {
-  border-left: 3px solid #f2d675;
+  border-left: 3px solid #f5e6a8;
   padding: 4px 0 4px 20px;
   margin-top: 24px;
 }
@@ -408,4 +408,104 @@
     grid-template-columns: 1fr;
     gap: 4px;
   }
+}
+.flowSteps {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.flowStep {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 16px;
+}
+
+.flowStepNum {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: rgba(13, 13, 12, 0.4);
+  padding-top: 2px;
+}
+
+.flowStepTitle {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.edgeList {
+  margin-top: 16px;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(13, 13, 12, 0.65);
+}
+.edgeList li {
+  margin-bottom: 4px;
+}
+
+.ctaRow {
+  display: flex;
+  gap: 12px;
+  margin-top: 28px;
+  flex-wrap: wrap;
+}
+
+.ctaLink {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 10px 18px;
+  border: 1px solid #0d0d0c;
+  color: #0d0d0c;
+  text-decoration: none;
+}
+.ctaLink:hover {
+  background: #0d0d0c;
+  color: #e7e2d6;
+}
+.ctaLinkPrimary {
+  background: #f5e6a8;
+  border-color: #0d0d0c;
+}
+.ctaLinkPrimary:hover {
+  background: #0d0d0c;
+  color: #f5e6a8;
+}
+
+.roleQuote {
+  border-left: 3px solid #c9bce0;
+  padding: 4px 0 4px 20px;
+  margin: 24px 0;
+  font-size: 15px;
+  font-style: italic;
+  color: rgba(13, 13, 12, 0.7);
+  line-height: 1.6;
+}
+
+.refGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.refCard {
+  border: 1px solid rgba(13, 13, 12, 0.2);
+  padding: 14px;
+}
+
+.refCardTitle {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.refCardNote {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(13, 13, 12, 0.6);
 }

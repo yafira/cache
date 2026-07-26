@@ -34,6 +34,21 @@ export default function CaseStudy() {
             </div>
           </div>
 
+          <div className={styles.ctaRow} style={{ marginTop: 20 }}>
+            <a
+              href="/"
+              className={`${styles.ctaLink} ${styles.ctaLinkPrimary}`}
+            >
+              try it live ↗
+            </a>
+            <a
+              href="https://github.com/YOUR-USERNAME/cache"
+              className={styles.ctaLink}
+            >
+              view source ↗
+            </a>
+          </div>
+
           <svg
             width="76"
             height="52"
@@ -46,7 +61,7 @@ export default function CaseStudy() {
               width="74"
               height="50"
               rx="3"
-              fill="#d9cfb0"
+              fill="#ffffff"
               stroke="#0d0d0c"
               strokeWidth="1"
             />
@@ -57,11 +72,10 @@ export default function CaseStudy() {
               height="36"
               rx="2"
               fill="none"
-              stroke="#0d0d0c"
-              strokeWidth="1.2"
+              stroke="#c9bce0"
+              strokeWidth="1.4"
               strokeDasharray="2 3"
               strokeLinecap="round"
-              opacity="0.6"
             />
             {[
               [4, 4],
@@ -72,10 +86,21 @@ export default function CaseStudy() {
               <path
                 key={i}
                 d={`M${cx - 3},${cy} L${cx + 3},${cy} M${cx},${cy - 3} L${cx},${cy + 3}`}
-                stroke="#0d0d0c"
-                strokeWidth="1"
+                stroke="#c9bce0"
+                strokeWidth="1.3"
               />
             ))}
+            <text
+              x="38"
+              y="30"
+              textAnchor="middle"
+              fontFamily="var(--font-mono)"
+              fontSize="11"
+              fill="#c9bce0"
+              letterSpacing="0.02em"
+            >
+              ⌘V
+            </text>
           </svg>
         </div>
       </section>
@@ -83,7 +108,7 @@ export default function CaseStudy() {
       <div className={styles.body}>
         {/* 01 — the idea */}
         <section className={styles.section}>
-          <div className={styles.sectionNumber}>01 — the idea</div>
+          <div className={styles.sectionNumber}>01 — the idea, and the why</div>
           <h2 className={styles.sectionTitle}>
             moodboards aren't the killer feature
           </h2>
@@ -103,6 +128,17 @@ export default function CaseStudy() {
             the entry point isn't "create a new board" — it's opening the app to
             nothing, hitting <code>cmd+v</code>, and it's just there.
           </p>
+          <div className={styles.callout}>
+            <div className={styles.calloutLabel}>why it should exist</div>
+            <p className={styles.prose}>
+              most tools in this space pick a side: dead simple with almost no
+              styling control, or fully styleable but heavier to open than a
+              quick reference-drop deserves. cache is trying to hold
+              paste-anything simplicity and real, figma-grade styling control at
+              the same time — that combination is the actual gap, and it's the
+              reason this kept going past the point of "just for me."
+            </p>
+          </div>
           <div className={styles.shotFrame}>
             <div className={styles.shotLabel}>
               [ screenshot: empty patch, cursor mid-paste, first card landing ]
@@ -110,23 +146,96 @@ export default function CaseStudy() {
           </div>
         </section>
 
-        {/* 02 — the landscape */}
+        {/* 02 — how it actually works */}
         <section className={styles.section}>
-          <div className={styles.sectionNumber}>02 — the landscape</div>
+          <div className={styles.sectionNumber}>02 — how it actually works</div>
+          <h2 className={styles.sectionTitle}>the happy path</h2>
+          <p className={styles.prose}>
+            not a click-through wireframe deck — this is the actual working app.
+            every step below is something you can do right now on the live link.
+          </p>
+
+          <div className={styles.flowSteps}>
+            <div className={styles.flowStep}>
+              <div className={styles.flowStepNum}>01</div>
+              <div>
+                <div className={styles.flowStepTitle}>
+                  open to nothing, paste something
+                </div>
+                <p className={styles.prose}>
+                  no landing page, no "new project" button. copy any image or a
+                  url and hit <code>cmd+v</code> directly on the patch — it
+                  appears immediately as a card.
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.flowStep}>
+              <div className={styles.flowStepNum}>02</div>
+              <div>
+                <div className={styles.flowStepTitle}>arrange and style it</div>
+                <p className={styles.prose}>
+                  drag to move, drag the corner dot to resize, double-click text
+                  to edit. select a piece and the style panel opens: fill color
+                  (custom in-app picker, not the browser's native color dialog),
+                  corner radius, rotation, opacity, layer order.
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.flowStep}>
+              <div className={styles.flowStepNum}>03</div>
+              <div>
+                <div className={styles.flowStepTitle}>
+                  paste a link or drop a file
+                </div>
+                <p className={styles.prose}>
+                  paste a raw url and it unfurls into a real card (title,
+                  preview image, domain) via a small server route. drop a pdf
+                  and it becomes an openable file card — both get an explicit
+                  "open" button so opening them never fights with dragging them.
+                </p>
+                <div className={styles.shotFrame}>
+                  <div className={styles.shotLabel}>
+                    [ screenshot: a link card and a pdf file card on the patch ]
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.flowStep}>
+              <div className={styles.flowStepNum}>04</div>
+              <div>
+                <div className={styles.flowStepTitle}>undo, delete, done</div>
+                <p className={styles.prose}>
+                  cmd/ctrl+z steps back through a real history (one undo per
+                  gesture, not per pixel). delete/backspace removes the selected
+                  piece. export as png, a self-contained html file (links and
+                  files stay genuinely clickable), or pdf (with real clickable
+                  link annotations, not just a flat picture).
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 03 — the landscape */}
+        <section className={styles.section}>
+          <div className={styles.sectionNumber}>03 — the landscape</div>
           <h2 className={styles.sectionTitle}>where it sits</h2>
           <p className={styles.prose}>
             this space is more crowded than it looks from the outside. are.na,
-            cosmos, milanote, mymind, kinopio, pureref, and figma's own figjam
-            are all circling the same territory — "visual, freeform,
-            collect-anything." most of the obvious wedges are already taken.
+            cosmos, milanote, mymind, pureref, and figma's own figjam are all
+            circling the same territory — "visual, freeform, collect-anything."
+            most of the obvious wedges are already taken.
           </p>
           <p className={styles.prose}>
-            the one that wasn't: kinopio deliberately gives you almost no
-            styling control — that's the whole point of it, a place to think
-            without fussing over how it looks. that's the exact opposite of what
-            i wanted. the actual gap was{" "}
-            <b>paste-anything simplicity + real, figma-grade styling control</b>{" "}
-            — nobody else was doing both at once.
+            the gap that was actually open:{" "}
+            <b>paste-anything simplicity + real, figma-grade styling control</b>
+            , held at the same time. plenty of tools nail one side of that or
+            the other — dead simple to start but little to no control over how
+            things look, or fully styleable but heavier to open than the task
+            deserves. this is trying to hold both at once.
           </p>
           <table className={styles.table}>
             <thead>
@@ -164,10 +273,10 @@ export default function CaseStudy() {
           </table>
         </section>
 
-        {/* 03 — naming */}
+        {/* 04 — naming */}
         <section className={styles.section}>
           <div className={styles.sectionNumber}>
-            03 — naming as a decision, not an afterthought
+            04 — naming as a decision, not an afterthought
           </div>
           <h2 className={styles.sectionTitle}>patches, stashes, cached</h2>
           <p className={styles.prose}>
@@ -200,9 +309,9 @@ export default function CaseStudy() {
           </p>
         </section>
 
-        {/* 04 — visual direction */}
+        {/* 05 — visual direction */}
         <section className={styles.section}>
-          <div className={styles.sectionNumber}>04 — visual direction</div>
+          <div className={styles.sectionNumber}>05 — visual direction</div>
           <h2 className={styles.sectionTitle}>three passes to get here</h2>
           <p className={styles.prose}>
             the first pass leaned into my usual pastel poetronics palette —
@@ -213,9 +322,13 @@ export default function CaseStudy() {
           </p>
           <p className={styles.prose}>
             the direction that actually stuck came from naming references
-            outside the usual moodboard aesthetic entirely — dieter rams, rick
-            owens, margiela — and translating restraint and monochrome into
-            actual interface decisions instead of literal fashion references.
+            outside the usual moodboard aesthetic entirely: <b>dieter rams</b>,
+            for the belief that color and ornament should only show up where
+            they're doing real work, not decorating it — and <b>margiela</b>,
+            for treating the absence of a logo as the identity itself.
+            translating that kind of restraint into actual interface decisions,
+            instead of quoting either one literally, is what got this away from
+            looking like every other tool in the category.
           </p>
           <div className={styles.evolution}>
             <div className={`${styles.evolutionStep} ${styles.rejected}`}>
@@ -233,7 +346,7 @@ export default function CaseStudy() {
                   style={{ background: "#cdc0e0" }}
                 />
               </div>
-              <div className={styles.evolutionLabel}>pass 1 — poetronics</div>
+              <div className={styles.evolutionLabel}>pass 01</div>
               <div className={styles.evolutionNote}>
                 pastel, running-stitch borders. reads as craft-tool default.
               </div>
@@ -253,7 +366,7 @@ export default function CaseStudy() {
                   style={{ background: "#a678d1" }}
                 />
               </div>
-              <div className={styles.evolutionLabel}>pass 2 — vibrant</div>
+              <div className={styles.evolutionLabel}>pass 02</div>
               <div className={styles.evolutionNote}>
                 same palette, more saturated. same problem, louder.
               </div>
@@ -274,12 +387,10 @@ export default function CaseStudy() {
                 />
                 <div
                   className={styles.evolutionSwatch}
-                  style={{ background: "#f2d675" }}
+                  style={{ background: "#f5e6a8" }}
                 />
               </div>
-              <div className={styles.evolutionLabel}>
-                final — rams / owens / margiela
-              </div>
+              <div className={styles.evolutionLabel}>final direction</div>
               <div className={styles.evolutionNote}>
                 dark chrome, bone paper canvas, sharp corners, one pastel accent
                 per function.
@@ -309,7 +420,7 @@ export default function CaseStudy() {
               />
               <div
                 className={styles.miniSwatch}
-                style={{ background: "#f2d675" }}
+                style={{ background: "#f5e6a8" }}
               />
               <div
                 className={styles.miniSwatch}
@@ -320,12 +431,60 @@ export default function CaseStudy() {
             <span className={styles.miniBtn}>link</span>
             <span className={styles.miniBtn}>file</span>
           </div>
+
+          <p className={styles.prose} style={{ marginTop: 24 }}>
+            <b>
+              the moodboard behind this direction was built inside cache itself
+            </b>{" "}
+            — pasting in product shots, the margiela tag, and instrument-panel
+            references directly onto a patch, rather than moodboarding this in
+            figma. partly to stay consistent with what the tool is actually for,
+            partly because there's no better way to show a paste-first tool's
+            taste than to use it that way.
+          </p>
+          <div className={styles.shotFrame} style={{ minHeight: 240 }}>
+            <div className={styles.shotLabel}>
+              [ screenshot: the actual moodboard patch, exported from cache ]
+            </div>
+          </div>
+          <div className={styles.refGrid}>
+            <div className={styles.refCard}>
+              <div className={styles.refCardTitle}>
+                dieter rams — braun products
+              </div>
+              <div className={styles.refCardNote}>
+                color and ornament only where they do real work — the one pastel
+                accent per function (lavender = selection, butter = the primary
+                action, pink = resize) comes from this.
+              </div>
+            </div>
+            <div className={styles.refCard}>
+              <div className={styles.refCardTitle}>
+                margiela — the blank tag
+              </div>
+              <div className={styles.refCardNote}>
+                absence as identity. the patch mark carries no logo — just white
+                fabric, lavender stitching, and a small embroidered ⌘v as the
+                one wink at what the tool does.
+              </div>
+            </div>
+            <div className={styles.refCard}>
+              <div className={styles.refCardTitle}>
+                instrument panels / hud readouts
+              </div>
+              <div className={styles.refCardNote}>
+                the corner readout (dimensions, item count) and the
+                viewfinder-bracket selection marks both borrow from technical
+                displays rather than soft craft-tool ui.
+              </div>
+            </div>
+          </div>
         </section>
 
-        {/* 05 — bugs */}
+        {/* 06 — bugs */}
         <section className={styles.section}>
           <div className={styles.sectionNumber}>
-            05 — three bugs worth naming
+            06 — three bugs worth naming
           </div>
           <h2 className={styles.sectionTitle}>what actually broke, and why</h2>
           <p className={styles.prose}>
@@ -421,9 +580,9 @@ export default function CaseStudy() {
           </div>
         </section>
 
-        {/* 06 — judgment call */}
+        {/* 07 — judgment call */}
         <section className={styles.section}>
-          <div className={styles.sectionNumber}>06 — a judgment call</div>
+          <div className={styles.sectionNumber}>07 — a judgment call</div>
           <h2 className={styles.sectionTitle}>
             catching a license before it shipped
           </h2>
@@ -445,9 +604,9 @@ export default function CaseStudy() {
           </div>
         </section>
 
-        {/* 07 — stack */}
+        {/* 08 — stack */}
         <section className={styles.section}>
-          <div className={styles.sectionNumber}>07 — stack</div>
+          <div className={styles.sectionNumber}>08 — stack</div>
           <h2 className={styles.sectionTitle}>what's built, what's roadmap</h2>
           <div className={styles.stackList}>
             <div className={styles.stackRow}>
@@ -487,23 +646,25 @@ export default function CaseStudy() {
           </div>
         </section>
 
-        {/* 08 — what's next */}
+        {/* 09 — what's next */}
         <section className={styles.section}>
-          <div className={styles.sectionNumber}>08 — what's next</div>
+          <div className={styles.sectionNumber}>09 — what's next</div>
           <h2 className={styles.sectionTitle}>the honest roadmap</h2>
           <p className={styles.prose}>
             resolve the agpl question before anything public. move sharing off
             the url hash and onto real storage once boards start carrying real
             files. add stashes — the folder layer above a single patch — once
             the core paste-arrange-export loop has been used by more than one
-            person. connections and flows between pieces stay explicitly out of
+            person. multi-select and group-move are worth having before stashes
+            are. connections and flows between pieces stay explicitly out of
             scope until the basic loop is proven.
           </p>
         </section>
       </div>
 
       <footer className={styles.footer}>
-        built in the open. <a href="/">back to the patch →</a>
+        <a href="/">try cache ↗</a> ·{" "}
+        <a href="https://github.com/YOUR-USERNAME/cache">source ↗</a>
       </footer>
     </div>
   );
