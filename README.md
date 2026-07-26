@@ -35,8 +35,8 @@ then open http://localhost:3000
   preset fonts (Playfair Display, Inter, Caveat, JetBrains Mono) for the in-app font picker, all via
   `next/font/google` — no external `@import`, no flash of unstyled text
 - `app/page.js` — renders the board
-- `app/case-study/` — the full write-up of the build (problem, positioning, naming, visual direction,
-  real bugs, the AGPL catch)
+- `app/case-study/` — the full write-up of the build (problem, positioning, naming, the cache/CS
+  concept, visual direction, real bugs)
 - `app/api/unfurl/route.js` — server-side link unfurling (og:title/og:image extraction)
 - `components/CacheBoard.jsx` — the whole tool: paste-to-add, drag, resize, per-piece styling (fill,
   font, corner radius, rotation, opacity, layer order), canvas background (color/pattern/image), PNG/
@@ -106,14 +106,35 @@ thumbnail.
 ## case study
 
 `/case-study` is a full write-up of the build — the problem framing, the competitive landscape, the
-naming decisions (patches/stashes/cached), the visual direction's actual evolution (including the two
-passes that got rejected before the current one), three real bugs with root causes, and the AGPL catch.
+naming decisions (patches/stashes/cached, plus the actual computer-science meaning of "cache"), the
+visual direction's actual evolution (including the two passes that got rejected before the current
+one), and three real bugs with root causes.
 Reuses the exact same design tokens and signature motifs (the corner tag, the bracket selection marks)
 as the tool itself, so the write-up and the product read as one coherent thing rather than a separate
 marketing page bolted on afterward. Two spots are marked as screenshot placeholders — drop in real
 captures of the running app once it's deployed.
 
+The page itself is split into `page.js` (a plain server component, just for the `metadata` export —
+Next.js requires that live in a server component) and `CaseStudyClient.jsx` (`"use client"`, everything
+actually rendered). Framer Motion drives a scroll-progress bar at the top, a staggered hero entrance,
+scroll-triggered reveals per section, a subtle idle float on the corner patch mark, and hover lifts on
+the evolution steps, reference cards, bug cards, and vocabulary cells.
+
+## favicon
+
+`app/icon.svg` is the same patch mark used throughout the app (white fabric, lavender stitching, the
+embroidered ⌘v) — Next.js auto-detects this filename and serves it as the favicon/app icon with no
+extra config.
+
 ## known limits of this starter (the real v2 list)
+
+- **the "file" button won't create a generic file card for an image anymore.** It used to accept any
+  file type with no restriction, which meant picking a photo through "file" gave you a boring
+  icon-and-filename card instead of the actual image — same file, worse result, depending on which
+  button you happened to click. Fixed two ways: the file input's `accept` now excludes image types (a
+  UI hint, not fully enforced everywhere), and `handleFileUpload` checks the actual file type at
+  runtime and redirects genuine images to the same path the "image" button uses, regardless of which
+  button was clicked to get there.
 
 - **cmd/ctrl+a selects everything on the patch**, native keyboard behavior on any OS. Delete/Backspace
   while everything's selected clears the whole patch (with undo support, same as any other delete).

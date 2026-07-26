@@ -57,44 +57,64 @@ const SHAPES = [
   { id: "flower", label: "flower" },
 ];
 
-// generates a closed path for a piece's own silhouette — lobes=0 is a plain
-// ellipse, lobes=3 with a small amplitude reads as a soft blob, lobes=5 with
-// a bigger amplitude reads as a flower. Same function drives the live
-// clip-path, the canvas export (via Path2D), and the HTML export, so all
-// three always match exactly regardless of the piece's actual w/h.
-function shapePathPoints(w, h, lobes, amp) {
+// generates a closed, smoothed silhouette for a piece — combines a few cosine
+// harmonics into a radius profile (rather than one clean wave, which reads as
+// a geometric star/polygon), then traces it with quadratic curves through
+// midpoints instead of straight lines, so peaks and valleys come out rounded
+// instead of pointed. Same function drives the live clip-path, the canvas
+// export (via Path2D), and the HTML export, so all three always match.
+function shapePathPoints(w, h, harmonics) {
   const cx = w / 2;
   const cy = h / 2;
-  const baseR = (Math.min(w, h) / 2) * 0.82;
-  const steps = 72;
+  const minDim = Math.min(w, h);
+  const baseR = (minDim / 2) * 0.8;
+  const steps = 56;
   const points = [];
-  for (let i = 0; i <= steps; i++) {
+  for (let i = 0; i < steps; i++) {
     const theta = (i / steps) * Math.PI * 2;
-    const r =
-      lobes === 0
-        ? baseR
-        : baseR + amp * (Math.min(w, h) / 2) * Math.cos(lobes * theta);
+    let r = baseR;
+    harmonics.forEach(({ lobes, amp, phase = 0 }) => {
+      r += amp * (minDim / 2) * Math.cos(lobes * theta + phase);
+    });
     points.push([
-      cx + r * Math.cos(theta) * (w / Math.min(w, h)),
-      cy + r * Math.sin(theta) * (h / Math.min(w, h)),
+      cx + r * Math.cos(theta) * (w / minDim),
+      cy + r * Math.sin(theta) * (h / minDim),
     ]);
   }
   return points;
 }
 
+// traces the sampled points as one smooth closed curve — each point acts as
+// a bezier control point, with the curve actually passing through the
+// midpoints between them, which is what rounds off the peaks and valleys
+function smoothClosedPath(points) {
+  const n = points.length;
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const start = mid(points[n - 1], points[0]);
+  let d = `M ${start[0]},${start[1]} `;
+  for (let i = 0; i < n; i++) {
+    const next = points[(i + 1) % n];
+    const m = mid(points[i], next);
+    d += `Q ${points[i][0]},${points[i][1]} ${m[0]},${m[1]} `;
+  }
+  return d + "Z";
+}
+
 function shapePathString(shapeId, w, h) {
   if (shapeId === "rect" || !shapeId) return null;
-  const lobes = shapeId === "flower" ? 5 : 3;
-  const amp = shapeId === "flower" ? 0.32 : 0.14;
-  const points = shapePathPoints(w, h, lobes, amp);
-  return (
-    `M ${points[0][0]},${points[0][1]} ` +
-    points
-      .slice(1)
-      .map(([x, y]) => `L ${x},${y}`)
-      .join(" ") +
-    " Z"
-  );
+  // blob: two overlapping frequencies at low amplitude — irregular and
+  // organic rather than a clean rounded triangle
+  // flower: one frequency at moderate amplitude — five distinct petals,
+  // smoothed so they read as rounded lobes instead of star points
+  const harmonics =
+    shapeId === "flower"
+      ? [{ lobes: 5, amp: 0.28 }]
+      : [
+          { lobes: 3, amp: 0.09, phase: 0.4 },
+          { lobes: 7, amp: 0.05, phase: 1.7 },
+        ];
+  const points = shapePathPoints(w, h, harmonics);
+  return smoothClosedPath(points);
 }
 
 // text font presets — cssVar drives the live contentEditable (via next/font,
@@ -462,6 +482,13 @@ export default function CacheBoard() {
   // no-backend approach as images)
   const handleFileUpload = (file) => {
     if (!file) return;
+    // images picked via the file button (accept is just a UI hint, not
+    // enforced everywhere) still get the real image treatment instead of a
+    // generic file card
+    if (file.type.startsWith("image/")) {
+      handleFiles([file]);
+      return;
+    }
     const { dx, dy } = nextOffset();
     const reader = new FileReader();
     reader.onload = () => {
@@ -1281,6 +1308,7 @@ ${customFontFaces}
         <input
           ref={fileUploadInputRef}
           type="file"
+          accept=".pdf,.doc,.docx,.zip,.txt,.csv,.json,.xlsx,.xls,.ppt,.pptx,.mp3,.mp4,.mov,.wav,application/pdf,text/*,application/*,audio/*,video/*"
           hidden
           onChange={(e) => {
             if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
