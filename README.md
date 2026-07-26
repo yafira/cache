@@ -115,6 +115,14 @@ captures of the running app once it's deployed.
 
 ## known limits of this starter (the real v2 list)
 
+- **cmd/ctrl+a selects everything on the patch**, native keyboard behavior on any OS. Delete/Backspace
+  while everything's selected clears the whole patch (with undo support, same as any other delete).
+  Escape cancels select-all without deleting anything. This isn't full multi-select — you can't drag
+  or restyle multiple pieces together yet, it's specifically the "select all, then delete" workflow
+  for clearing a patch.
+- **default patch background is `#fbfcf5`** — close to white, not stark white, so pasted images and
+  cards still read as sitting on something rather than floating on pure white.
+
 - **auto-saves to localStorage, per browser only.** Refreshing the page recovers your last patch —
   no more losing work on an accidental reload. This is _not_ shared, synced across devices, or
   backed by any server: it's purely "this browser remembers what was open last." The share link is
@@ -171,15 +179,18 @@ captures of the running app once it's deployed.
   source site doesn't allow CORS on its preview image, the export just falls back to a blank card
   background rather than failing (or breaking the whole PNG export via a tainted canvas).
 
-- **⚠️ `@imgly/background-removal` (used for the "remove background" button) is AGPL-3.0 licensed.**
-  This is worth resolving before shipping anything commercial — AGPL generally requires that if the
-  app runs as a network-accessible service, the app's own source has to be made available under AGPL
-  too, unless a commercial license is purchased from IMG.LY (they sell one specifically for this).
-  This isn't legal advice, just a flag: worth a real read of the license or a quick conversation with
-  a lawyer before this goes further than a personal prototype. If AGPL doesn't work for the business,
-  alternatives are a paid IMG.LY commercial license, or swapping in a client-side segmentation model
-  under a more permissive license (e.g. a Hugging Face Transformers.js pipeline with a compatible
-  model, though matting quality varies more by model than this library's purpose-built one).
+- **`@imgly/background-removal` (used for the "remove background" button) is AGPL-3.0 licensed —
+  disclosed here on purpose, not routed around.** AGPL generally requires that if an app runs as a
+  network-accessible service, the app's own source has to be made available under AGPL too, unless a
+  commercial license is purchased from IMG.LY. The library's own docs are direct that it's
+  "free for use under the AGPL license," with a commercial option listed for anyone who needs
+  something else — this isn't a loophole, it's the intended use. The decision here was to keep it and
+  say so plainly rather than swap in something worse just to dodge a license conversation. This isn't
+  legal advice; if the terms of a specific deployment ever matter (e.g. a future commercial version
+  with different obligations), that's worth a real read of the license or a conversation with a
+  lawyer at that point — alternatives if it ever needs to change are a paid IMG.LY commercial license,
+  or a client-side segmentation model under a more permissive license (matting quality varies more by
+  model than this library's purpose-built one).
 - **background removal runs entirely client-side** — a WASM/ONNX model loads in the browser (via
   `import("@imgly/background-removal")`, code-split so it doesn't bloat the initial bundle) and
   processes the image locally. First use in a session will be slower while the model downloads;

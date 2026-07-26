@@ -311,6 +311,28 @@ export default function CaseStudy() {
             that it also folded neatly into "cached" as the save-state verb was
             a bonus, not the plan.
           </p>
+          <p className={styles.prose} style={{ marginTop: 16 }}>
+            the computer-science meaning isn't just a pun sitting on top of the
+            name, either. a real cache is a small, fast store that sits between
+            you and the thing you actually want, so the next time you reach for
+            it, it's already close at hand instead of being re-fetched from
+            wherever it originally lived. a patch works the same way — the
+            references you just pulled together stay right where you left them,
+            arranged, instead of needing to be found again each time you want to
+            look at them together.
+          </p>
+          <p className={styles.prose} style={{ marginTop: 16 }}>
+            there's a well-known line in computer science: there are only two
+            hard problems — <i>cache invalidation</i> and <i>naming things</i>.
+            this project ran straight into the second one, directly above. it
+            mostly dodges the first — nothing in a patch needs to expire or get
+            evicted the way a real cache does. the detail worth keeping, though:
+            "cache" comes from the french <i>cacher</i>, to hide. the actual
+            visual identity here does the opposite on purpose — a blank tag
+            instead of a hidden logo, an openly disclosed license question
+            instead of a quietly buried one (see 07). the name kept its function
+            and inverted its origin.
+          </p>
         </section>
 
         {/* 05 — visual direction */}
@@ -587,23 +609,23 @@ export default function CaseStudy() {
         {/* 07 — judgment call */}
         <section className={styles.section}>
           <div className={styles.sectionNumber}>07 — a judgment call</div>
-          <h2 className={styles.sectionTitle}>
-            catching a license before it shipped
-          </h2>
+          <h2 className={styles.sectionTitle}>a license, kept in the open</h2>
           <div className={styles.callout}>
             <div className={styles.calloutLabel}>
-              flagged, not silently shipped
+              disclosed, not routed around
             </div>
             <p className={styles.prose}>
               background removal for images runs on{" "}
               <code>@imgly/background-removal</code> — a real, client-side ml
-              model, no backend needed. it's also licensed agpl-3.0. running
-              agpl code in a network-facing app generally means the whole app's
-              source has to be released under agpl too, unless a commercial
-              license gets purchased from the vendor. for a project headed
-              toward an actual kickstarter, that's not a detail to bury in a
-              changelog — it's a decision that needs to be made on purpose
-              before this ships past a personal prototype.
+              model, no backend needed. it's licensed agpl-3.0, which generally
+              means a network-facing app built on it has to release its own
+              source under agpl too, unless a commercial license gets purchased
+              from img.ly. the library's own docs are direct about it: "free for
+              use under the agpl license," with a commercial option listed for
+              anyone who needs something else. that's not a loophole to work
+              around — it's the intended use. the decision here was to keep it
+              and say so plainly, rather than either burying the detail or
+              swapping in something worse just to avoid a license conversation.
             </p>
           </div>
         </section>
@@ -680,10 +702,9 @@ export default function CaseStudy() {
             more than one piece at a time; stashes, the folder layer above a
             single patch, once the core loop has been used by more than one
             person; connections and flows between pieces, which stay explicitly
-            out of scope until the basic loop is proven. resolve the agpl
-            question on background removal before anything goes public. move
-            sharing off the url hash and onto real storage once boards start
-            carrying real files.
+            out of scope until the basic loop is proven. move sharing off the
+            url hash and onto real storage once boards start carrying real
+            files.
           </p>
         </section>
       </div>

@@ -27,7 +27,7 @@ const MOBILE_BREAKPOINT = 768;
 // monochrome chrome + three pastel accents, each doing exactly one job —
 // lavender marks selection, butter marks the primary action, pink marks resize
 const INK = "#0d0d0c";
-const BONE = "#f8f6f0";
+const BONE = "#fbfcf5";
 const CONCRETE = "#8f8b81";
 const GRAPHITE = "#1c1b19";
 const BONE_TEXT = "#ece7db";
@@ -226,6 +226,7 @@ function loadImage(src, allowCrossOrigin) {
 export default function CacheBoard() {
   const [elements, setElements] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  const [allSelected, setAllSelected] = useState(false);
   const [canvasBg, setCanvasBg] = useState(BONE);
   const [canvasPattern, setCanvasPattern] = useState("none");
   const [canvasImage, setCanvasImage] = useState(null);
@@ -668,6 +669,7 @@ export default function CacheBoard() {
     e.stopPropagation();
     pushHistory(elements);
     setSelectedId(el.id);
+    setAllSelected(false);
     dragRef.current = {
       id: el.id,
       startX: e.clientX,
@@ -1123,7 +1125,8 @@ ${customFontFaces}
     return () => window.removeEventListener("pointerdown", onClickOutside);
   }, [downloadPanelOpen]);
 
-  // keyboard shortcuts: delete/backspace removes the selected piece, cmd/ctrl+z undoes
+  // keyboard shortcuts: delete/backspace removes the selected piece (or every
+  // piece, if select-all is active), cmd/ctrl+a selects all, cmd/ctrl+z undoes
   useEffect(() => {
     const onKeyDown = (e) => {
       const active = document.activeElement;
@@ -1133,28 +1136,46 @@ ${customFontFaces}
           active.tagName === "TEXTAREA" ||
           active.isContentEditable);
 
-      if (
-        (e.key === "Delete" || e.key === "Backspace") &&
-        selectedId &&
-        !isTypingSomewhere
-      ) {
+      if (isTypingSomewhere) return;
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        if (elements.length > 0) {
+          setAllSelected(true);
+          setSelectedId(null);
+        }
+        return;
+      }
+
+      if (e.key === "Escape" && allSelected) {
+        setAllSelected(false);
+        return;
+      }
+
+      if ((e.key === "Delete" || e.key === "Backspace") && allSelected) {
+        e.preventDefault();
+        setElements((prev) => {
+          pushHistory(prev);
+          return [];
+        });
+        setAllSelected(false);
+        return;
+      }
+
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedId) {
         e.preventDefault();
         deleteElement(selectedId);
         return;
       }
 
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.key.toLowerCase() === "z" &&
-        !isTypingSomewhere
-      ) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
         e.preventDefault();
         undo();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedId]);
+  }, [selectedId, allSelected, elements]);
 
   // viewfinder-bracket selection indicator and style panel now live outside
   // this component (see below) so their identity is stable across renders —
@@ -1465,7 +1486,10 @@ ${customFontFaces}
           >
             <div
               ref={boardRef}
-              onPointerDown={() => setSelectedId(null)}
+              onPointerDown={() => {
+                setSelectedId(null);
+                setAllSelected(false);
+              }}
               onDragOver={(e) => {
                 e.preventDefault();
                 if (!isDraggingOver) setIsDraggingOver(true);
@@ -1593,15 +1617,16 @@ ${customFontFaces}
                   left: 16,
                   fontSize: 10,
                   color: INK,
-                  opacity: 0.35,
+                  opacity: allSelected ? 0.6 : 0.35,
                   letterSpacing: "0.08em",
                   pointerEvents: "none",
                   userSelect: "none",
                   fontFamily: "var(--font-mono)",
                 }}
               >
-                {BOARD_W}×{BOARD_H} / {String(elements.length).padStart(3, "0")}{" "}
-                ITEMS
+                {allSelected
+                  ? `${elements.length} SELECTED — DELETE TO CLEAR, ESC TO CANCEL`
+                  : `${BOARD_W}×${BOARD_H} / ${String(elements.length).padStart(3, "0")} ITEMS`}
               </div>
 
               {elements
@@ -1759,7 +1784,9 @@ ${customFontFaces}
                         <ExternalLink size={13} />
                       </button>
                     )}
-                    {selectedId === el.id && <CornerBrackets el={el} />}
+                    {(selectedId === el.id || allSelected) && (
+                      <CornerBrackets el={el} />
+                    )}
                     {selectedId === el.id && (
                       <div
                         onPointerDown={(e) => onPointerDownResize(e, el)}
