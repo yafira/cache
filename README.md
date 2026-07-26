@@ -128,6 +128,16 @@ extra config.
 
 ## known limits of this starter (the real v2 list)
 
+- **the patch now actually fills the mobile screen.** It was fitting to width only, which works fine
+  on desktop because laptop screens are close enough in aspect ratio to the 1400x900 board that
+  width-fit happens to fill most of the height too — a portrait phone isn't close at all, so the
+  board was rendering tiny with huge empty gaps above and below it. Mobile now fits to whichever
+  dimension needs less zoom-out (like `background-size: cover` instead of `contain`), so the board
+  fills the screen the way it does on desktop; the dimension that overflows scrolls/pans, which
+  `boardWrap` already supported. Also switched mobile's alignment from centered to top-left anchored,
+  since centering an overflowing board would've hidden its left edge behind an initial scroll
+  position.
+
 - **the "file" button won't create a generic file card for an image anymore.** It used to accept any
   file type with no restriction, which meant picking a photo through "file" gave you a boring
   icon-and-filename card instead of the actual image — same file, worse result, depending on which

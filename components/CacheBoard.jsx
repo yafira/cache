@@ -305,16 +305,33 @@ export default function CacheBoard() {
   const [editingId, setEditingId] = useState(null);
   const selected = elements.find((e) => e.id === selectedId) || null;
 
-  // responsive: track viewport and compute a fit-to-width scale for the board
+  // responsive: track viewport and compute a fit scale for the board.
+  // Desktop fits to width only — laptop screens are close enough in aspect
+  // ratio to the 1400x900 board that width-fit happens to fill most of the
+  // height too. A portrait phone isn't even close: fitting to width alone
+  // left the board tiny with huge empty gaps above/below. Mobile fits to
+  // whichever dimension needs LESS zoom-out (like background-size: cover
+  // instead of contain), so the board actually fills the screen the way it
+  // does on desktop — the other dimension overflows and scrolls/pans,
+  // which boardWrap already supports (overflow: auto).
   useEffect(() => {
     const compute = () => {
       const vw = window.innerWidth;
-      setIsMobile(vw < MOBILE_BREAKPOINT);
+      const mobile = vw < MOBILE_BREAKPOINT;
+      setIsMobile(mobile);
       const wrapEl = boardWrapRef.current;
-      const available = wrapEl ? wrapEl.clientWidth : vw;
-      const padding = vw < MOBILE_BREAKPOINT ? 16 : 64;
-      const next = Math.min(1, (available - padding) / BOARD_W);
-      setScale(next > 0 ? next : 1);
+      const availableW = wrapEl ? wrapEl.clientWidth : vw;
+      const availableH = wrapEl ? wrapEl.clientHeight : window.innerHeight;
+      const padding = mobile ? 16 : 64;
+
+      if (mobile) {
+        const scaleW = (availableW - padding) / BOARD_W;
+        const scaleH = (availableH - padding) / BOARD_H;
+        setScale(Math.max(scaleW, scaleH));
+      } else {
+        const next = Math.min(1, (availableW - padding) / BOARD_W);
+        setScale(next > 0 ? next : 1);
+      }
     };
     compute();
     window.addEventListener("resize", compute);

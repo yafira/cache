@@ -598,6 +598,18 @@ export default function CaseStudyClient() {
               [ screenshot: the actual moodboard patch, exported from cache ]
             </div>
           </div>
+          <p
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 12,
+              color: "rgba(13,13,12,0.5)",
+              marginTop: 10,
+              fontStyle: "italic",
+            }}
+          >
+            (yes — this moodboard was made entirely inside cache. paste,
+            arrange, export. no figma detour.)
+          </p>
           <div className={styles.refGrid}>
             <motion.div whileHover={{ y: -4 }} className={styles.refCard}>
               <div className={styles.refCardTitle}>
