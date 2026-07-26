@@ -47,9 +47,55 @@ const PATTERNS = [
   { id: "dots", label: "dots" },
   { id: "grid", label: "grid" },
   { id: "diagonal", label: "diagonal" },
+];
+
+// shape options for color-block pieces — rect (default, plain box), blob,
+// or flower, all generated from the same parametric silhouette function
+const SHAPES = [
+  { id: "rect", label: "rect" },
   { id: "blob", label: "blob" },
   { id: "flower", label: "flower" },
 ];
+
+// generates a closed path for a piece's own silhouette — lobes=0 is a plain
+// ellipse, lobes=3 with a small amplitude reads as a soft blob, lobes=5 with
+// a bigger amplitude reads as a flower. Same function drives the live
+// clip-path, the canvas export (via Path2D), and the HTML export, so all
+// three always match exactly regardless of the piece's actual w/h.
+function shapePathPoints(w, h, lobes, amp) {
+  const cx = w / 2;
+  const cy = h / 2;
+  const baseR = (Math.min(w, h) / 2) * 0.82;
+  const steps = 72;
+  const points = [];
+  for (let i = 0; i <= steps; i++) {
+    const theta = (i / steps) * Math.PI * 2;
+    const r =
+      lobes === 0
+        ? baseR
+        : baseR + amp * (Math.min(w, h) / 2) * Math.cos(lobes * theta);
+    points.push([
+      cx + r * Math.cos(theta) * (w / Math.min(w, h)),
+      cy + r * Math.sin(theta) * (h / Math.min(w, h)),
+    ]);
+  }
+  return points;
+}
+
+function shapePathString(shapeId, w, h) {
+  if (shapeId === "rect" || !shapeId) return null;
+  const lobes = shapeId === "flower" ? 5 : 3;
+  const amp = shapeId === "flower" ? 0.32 : 0.14;
+  const points = shapePathPoints(w, h, lobes, amp);
+  return (
+    `M ${points[0][0]},${points[0][1]} ` +
+    points
+      .slice(1)
+      .map(([x, y]) => `L ${x},${y}`)
+      .join(" ") +
+    " Z"
+  );
+}
 
 // text font presets — cssVar drives the live contentEditable (via next/font,
 // no flash of unstyled text), family is the real font name used for canvas
@@ -109,31 +155,6 @@ function patternCSS(patternId) {
           "repeating-linear-gradient(45deg, rgba(13,13,12,0.14) 0 1.5px, transparent 1.5px 14px)",
         backgroundSize: "auto",
       };
-    case "blob": {
-      const svg =
-        "<svg xmlns='http://www.w3.org/2000/svg' width='44' height='44'>" +
-        "<path d='M22,10 C28,10 33,14 33,21 C33,28 28,33 21,33 C14,33 9,28 9,21 C9,14 15,10 22,10 Z' fill='rgba(13,13,12,0.14)'/>" +
-        "</svg>";
-      return {
-        backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(svg)}")`,
-        backgroundSize: "44px 44px",
-      };
-    }
-    case "flower": {
-      const svg =
-        "<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48'>" +
-        "<circle cx='32' cy='24' r='5' fill='rgba(13,13,12,0.13)'/>" +
-        "<circle cx='26.5' cy='31.6' r='5' fill='rgba(13,13,12,0.13)'/>" +
-        "<circle cx='17.5' cy='28.7' r='5' fill='rgba(13,13,12,0.13)'/>" +
-        "<circle cx='17.5' cy='19.3' r='5' fill='rgba(13,13,12,0.13)'/>" +
-        "<circle cx='26.5' cy='16.4' r='5' fill='rgba(13,13,12,0.13)'/>" +
-        "<circle cx='24' cy='24' r='4' fill='rgba(13,13,12,0.18)'/>" +
-        "</svg>";
-      return {
-        backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(svg)}")`,
-        backgroundSize: "48px 48px",
-      };
-    }
     default:
       return {};
   }
@@ -142,16 +163,7 @@ function patternCSS(patternId) {
 // same patterns, rendered as a small tile for canvas export via createPattern —
 // keeps the exported PNG matching what's on screen
 function makePatternTile(patternId) {
-  const size =
-    patternId === "flower"
-      ? 48
-      : patternId === "blob"
-        ? 44
-        : patternId === "diagonal"
-          ? 28
-          : patternId === "grid"
-            ? 28
-            : 18;
+  const size = patternId === "diagonal" ? 28 : patternId === "grid" ? 28 : 18;
   const tile = document.createElement("canvas");
   tile.width = size;
   tile.height = size;
@@ -178,34 +190,6 @@ function makePatternTile(patternId) {
     tctx.moveTo(0, size);
     tctx.lineTo(size, 0);
     tctx.stroke();
-  } else if (patternId === "blob") {
-    tctx.fillStyle = "rgba(13,13,12,0.14)";
-    tctx.beginPath();
-    tctx.moveTo(22, 10);
-    tctx.bezierCurveTo(28, 10, 33, 14, 33, 21);
-    tctx.bezierCurveTo(33, 28, 28, 33, 21, 33);
-    tctx.bezierCurveTo(14, 33, 9, 28, 9, 21);
-    tctx.bezierCurveTo(9, 14, 15, 10, 22, 10);
-    tctx.closePath();
-    tctx.fill();
-  } else if (patternId === "flower") {
-    const petals = [
-      [32, 24],
-      [26.5, 31.6],
-      [17.5, 28.7],
-      [17.5, 19.3],
-      [26.5, 16.4],
-    ];
-    tctx.fillStyle = "rgba(13,13,12,0.13)";
-    petals.forEach(([cx, cy]) => {
-      tctx.beginPath();
-      tctx.arc(cx, cy, 5, 0, Math.PI * 2);
-      tctx.fill();
-    });
-    tctx.fillStyle = "rgba(13,13,12,0.18)";
-    tctx.beginPath();
-    tctx.arc(24, 24, 4, 0, Math.PI * 2);
-    tctx.fill();
   }
   return tile;
 }
@@ -421,6 +405,7 @@ export default function CacheBoard() {
       y: BOARD_H / 2 - 80 + dy,
       w: 200,
       h: 160,
+      shape: "rect",
       bg: hex || CONCRETE,
     });
   };
@@ -780,8 +765,13 @@ export default function CacheBoard() {
 
       if (el.type === "color") {
         ctx.fillStyle = el.bg;
-        roundRectPath(ctx, 0, 0, el.w, el.h, el.radius || 0);
-        ctx.fill();
+        if (el.shape && el.shape !== "rect") {
+          const path = new Path2D(shapePathString(el.shape, el.w, el.h));
+          ctx.fill(path);
+        } else {
+          roundRectPath(ctx, 0, 0, el.w, el.h, el.radius || 0);
+          ctx.fill();
+        }
       } else if (el.type === "image" && el.src) {
         const img = await loadImage(el.src);
         if (img) {
@@ -1002,7 +992,11 @@ export default function CacheBoard() {
         }deg);opacity:${el.opacity ?? 1};border-radius:${el.radius || 0}px;overflow:hidden;box-sizing:border-box;`;
 
         if (el.type === "color") {
-          return `<div style="${common}background:${el.bg};"></div>`;
+          const clip =
+            el.shape && el.shape !== "rect"
+              ? `clip-path:path('${shapePathString(el.shape, el.w, el.h)}');`
+              : "";
+          return `<div style="${common}background:${el.bg};${clip}"></div>`;
         }
         if (el.type === "image" && el.src) {
           return `<div style="${common}"><img src="${escapeAttr(el.src)}" style="width:100%;height:100%;object-fit:cover;display:block;" alt="" /></div>`;
@@ -1628,7 +1622,14 @@ ${customFontFaces}
                       zIndex: el.zIndex,
                       cursor: "grab",
                       touchAction: "none",
-                      borderRadius: el.radius || 0,
+                      borderRadius:
+                        el.type === "color" && el.shape && el.shape !== "rect"
+                          ? 0
+                          : el.radius || 0,
+                      clipPath:
+                        el.type === "color" && el.shape && el.shape !== "rect"
+                          ? `path("${shapePathString(el.shape, el.w, el.h)}")`
+                          : "none",
                       background:
                         el.type === "color"
                           ? el.bg
@@ -1977,6 +1978,27 @@ function StylePanelContent({
         </div>
       )}
 
+      {selected.type === "color" && (
+        <div className={styles.field}>
+          shape
+          <div className={styles.bgPatternRow}>
+            {SHAPES.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => updateElement(selected.id, { shape: s.id })}
+                className={`${styles.bgPatternBtn} ${
+                  (selected.shape || "rect") === s.id
+                    ? styles.bgPatternBtnActive
+                    : ""
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {selected.type === "text" && (
         <>
           <div className={styles.field}>
@@ -2059,19 +2081,25 @@ function StylePanelContent({
         </>
       )}
 
-      <label className={styles.field}>
-        corner radius — {selected.radius ?? 0}px
-        <input
-          onPointerDown={onAdjustStart}
-          type="range"
-          min="0"
-          max="80"
-          value={selected.radius ?? 0}
-          onChange={(e) =>
-            updateElement(selected.id, { radius: Number(e.target.value) })
-          }
-        />
-      </label>
+      {!(
+        selected.type === "color" &&
+        selected.shape &&
+        selected.shape !== "rect"
+      ) && (
+        <label className={styles.field}>
+          corner radius — {selected.radius ?? 0}px
+          <input
+            onPointerDown={onAdjustStart}
+            type="range"
+            min="0"
+            max="80"
+            value={selected.radius ?? 0}
+            onChange={(e) =>
+              updateElement(selected.id, { radius: Number(e.target.value) })
+            }
+          />
+        </label>
+      )}
 
       <label className={styles.field}>
         rotation — {selected.rotation ?? 0}°

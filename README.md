@@ -120,13 +120,17 @@ captures of the running app once it's deployed.
   backed by any server: it's purely "this browser remembers what was open last." The share link is
   still the only way to hand a patch to someone else, and it's a one-time snapshot, not a live
   document — editing after sharing doesn't update the link you already sent.
-- **patch backgrounds now include two shape-based patterns** (blob, flower) alongside the existing
-  dots/grid/diagonal, each rendered as an inline SVG for the live board and a matching canvas tile
-  for export parity. The toolbar's patch icon and the pattern picker buttons both show a live preview
-  of the actual pattern now, instead of always showing a flat color swatch.
-- **freeform/custom pattern drawing isn't built** — genuinely a bigger feature (a small drawing/brush
-  tool, not just another preset) than the others here, so it's left as a real "not yet" rather than
-  a half-built stub.
+- **the toolbar's patch icon and pattern picker buttons now show a live preview** of the actual
+  pattern (dots/grid/diagonal) instead of always a flat color swatch.
+- **color-block pieces can be shaped now, not just rectangles** — rect (default), blob, or flower.
+  All three come from one parametric silhouette function that generates a closed path from the
+  piece's actual width/height, so it scales correctly on resize. The same path drives the live
+  `clip-path`, the canvas export (via `Path2D`), and the HTML export — all three always match.
+  Corner radius only applies to rect; it's hidden from the style panel for shaped pieces since it
+  wouldn't do anything visible.
+- **freeform/custom shape drawing isn't built** — genuinely a bigger feature (an actual drawing/brush
+  tool, not just another preset) than blob/flower, so it's left as a real "not yet" rather than a
+  half-built stub.
 
 - **text pieces now have a font picker** — six presets (mono, display, serif, sans, handwritten,
   mono alt), all self-hosted via `next/font/google` in `app/layout.js` so there's no flash of

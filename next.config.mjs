@@ -14,6 +14,14 @@ const nextConfig = {
       type: "javascript/auto",
       resolve: { fullySpecified: false },
     });
+    // onnxruntime-web's dynamic require() pattern triggers a webpack warning
+    // it can't statically analyze — harmless (confirmed: build still
+    // succeeds), just noisy. Silencing it specifically rather than
+    // suppressing warnings broadly.
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings || []),
+      { module: /onnxruntime-web/, message: /Critical dependency/ },
+    ];
     return config;
   },
 };
