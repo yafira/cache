@@ -209,32 +209,39 @@ extra config.
   added via the toolbar still auto-select — those are deliberate "add a stylable thing" actions where
   opening the panel immediately is the expected next step.
 
-- **background removal is working now** — `BG_REMOVAL_ENABLED = true` in `components/CacheBoard.jsx`.
-  Getting here took three real attempts, worth recording honestly since the failures were as
-  instructive as the fix:
-  1. First hypothesis: `@imgly/background-removal` needs `SharedArrayBuffer`, which needs
-     cross-origin isolation headers. Added `Cross-Origin-Opener-Policy` /
-     `Cross-Origin-Embedder-Policy: credentialless` (not the stricter `require-corp`, which
-     would've silently broken link-card preview images loaded from third-party sites with no
-     `Cross-Origin-Resource-Policy` header). Verified the headers actually landed via `curl -I`
-     against a real production server. **Didn't fix it.**
-  2. Second, a real bug, found and fixed: the library's `isAbsoluteURI()` check uses a regex
-     requiring `//` right after the scheme (matches `http://`, not `data:`) — so it misread every
-     pasted image's `data:` URL as a relative path. Fixed by converting to a `Blob` before calling
-     `removeBackground()`. A genuine bug, confirmed by installing the package locally and reading
-     its source — but **the same error persisted anyway**, meaning this wasn't the actual blocker
-     either.
-  3. The real cause: the crash traced into `onnxruntime-web`'s own bundled WASM-loading code (a
-     function named `RelativeURL`), which is exactly the subsystem `@imgly/background-removal`'s
-     docs warn about — "currently only NextJS 15 is supported," and this app was on 14.2.5.
-     The actual fix, once the app was upgraded to Next.js 15: load the library from a CDN
-     (`https://esm.sh/@imgly/background-removal@1.7.0`) with a `/* webpackIgnore: true */` comment on
-     the dynamic `import()`, instead of importing the local `node_modules` copy. Webpack never touches
-     a webpack-ignored import, so it never rewrites `onnxruntime-web`'s internal `import.meta.url` —
-     which is what was breaking `RelativeURL`'s WASM-path construction in the first place. Also passes
-     `proxyToWorker: false` to keep the whole computation on the main thread rather than a Worker
-     (worker construction hits the same `import.meta.url` pattern) — the tradeoff is a brief stutter
-     while a removal is running, since it's no longer off-thread.
+- **background removal is working now** —
+
+![the moodboard, built inside cache](/public/screenshots/05-removing-bg.gif)
+
+`BG_REMOVAL_ENABLED = true` in `components/CacheBoard.jsx`.
+Getting here took three real attempts, worth recording honestly since the failures were as
+instructive as the fix:
+
+1. First hypothesis: `@imgly/background-removal` needs `SharedArrayBuffer`, which needs
+   cross-origin isolation headers. Added `Cross-Origin-Opener-Policy` /
+   `Cross-Origin-Embedder-Policy: credentialless` (not the stricter `require-corp`, which
+   would've silently broken link-card preview images loaded from third-party sites with no
+   `Cross-Origin-Resource-Policy` header). Verified the headers actually landed via `curl -I`
+   against a real production server. **Didn't fix it.**
+2. Second, a real bug, found and fixed: the library's `isAbsoluteURI()` check uses a regex
+   requiring `//` right after the scheme (matches `http://`, not `data:`) — so it misread every
+   pasted image's `data:` URL as a relative path. Fixed by converting to a `Blob` before calling
+   `removeBackground()`. A genuine bug, confirmed by installing the package locally and reading
+   its source — but **the same error persisted anyway**, meaning this wasn't the actual blocker
+   either.
+3. The real cause: the crash traced into `onnxruntime-web`'s own bundled WASM-loading code (a
+   function named `RelativeURL`), which is exactly the subsystem `@imgly/background-removal`'s
+   docs warn about — "currently only NextJS 15 is supported," and this app was on 14.2.5.
+   The actual fix, once the app was upgraded to Next.js 15: load the library from a CDN
+   (`https://esm.sh/@imgly/background-removal@1.7.0`) with a `/* webpackIgnore: true */` comment on
+   the dynamic `import()`, instead of importing the local `node_modules` copy. Webpack never touches
+   a webpack-ignored import, so it never rewrites `onnxruntime-web`'s internal `import.meta.url` —
+   which is what was breaking `RelativeURL`'s WASM-path construction in the first place. Also passes
+   `proxyToWorker: false` to keep the whole computation on the main thread rather than a Worker
+   (worker construction hits the same `import.meta.url` pattern) — the tradeoff is a brief stutter
+   while a removal is running, since it's no longer off-thread.
+
+   This was a must add feature because I really enjoy removing backgrounds from images, especially for moodboarding!
 
 - **the patch now actually fills the mobile screen.** It was fitting to width only, which works fine
   on desktop because laptop screens are close enough in aspect ratio to the 1400x900 board that
