@@ -2,6 +2,7 @@
 
 import { motion, useScroll, useSpring } from "framer-motion";
 import styles from "./case-study.module.css";
+import Image from "next/image";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 28 },
@@ -219,7 +220,12 @@ export default function CaseStudyClient() {
           </div>
           <div className={styles.shotFrame}>
             <div className={styles.shotLabel}>
-              [ screenshot: empty patch, cursor mid-paste, first card landing ]
+              <Image
+                src="/screenshots/01-paste.png"
+                alt="screenshot: the full patch UI — toolbar, canvas, and a real patch in progress, at real size"
+                width={500}
+                height={500}
+              />
             </div>
           </div>
         </motion.section>
@@ -288,7 +294,12 @@ export default function CaseStudyClient() {
                 </p>
                 <div className={styles.shotFrame}>
                   <div className={styles.shotLabel}>
-                    [ screenshot: a link card and a pdf file card on the patch ]
+                    <Image
+                      src="/screenshots/02-link-file-cards.gif"
+                      alt="screenshot: a link card and a pdf file card on the patch"
+                      width={500}
+                      height={500}
+                    />
                   </div>
                 </div>
               </div>
@@ -566,8 +577,13 @@ export default function CaseStudyClient() {
           </h2>
           <div className={styles.shotFrame} style={{ minHeight: 320 }}>
             <div className={styles.shotLabel}>
-              [ screenshot: the full patch UI — toolbar, canvas, and a real
-              patch in progress, at real size ]
+              <Image
+                src="/screenshots/01-paste.png"
+                alt="screenshot: the full patch UI — toolbar, canvas, and a real
+              patch in progress, at real size"
+                width={500}
+                height={500}
+              />
             </div>
           </div>
 
@@ -607,9 +623,41 @@ export default function CaseStudyClient() {
             partly because there's no better way to show a paste-first tool's
             taste than to use it that way.
           </p>
-          <div className={styles.shotFrame} style={{ minHeight: 240 }}>
-            <div className={styles.shotLabel}>
-              [ screenshot: the actual moodboard patch, exported from cache ]
+          <div>
+            <div className={styles.shotFrame} style={{ minHeight: 320 }}>
+              <div
+                className={styles.shotLabel}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "24px",
+                  width: "100%",
+                  alignItems: "center",
+                  padding: "10px",
+                }}
+              >
+                <Image
+                  src="/screenshots/04-braun.png"
+                  alt="screenshot: the actual moodboard patch, exported from cache"
+                  width={800}
+                  height={500}
+                  style={{ width: "100%", height: "auto", display: "block" }}
+                />
+                <Image
+                  src="/screenshots/04-tag.png"
+                  alt="screenshot: the actual moodboard patch, exported from cache"
+                  width={800}
+                  height={500}
+                  style={{ width: "100%", height: "auto", display: "block" }}
+                />
+                <Image
+                  src="/screenshots/04-instrument.gif"
+                  alt="screenshot: the actual moodboard patch, exported from cache"
+                  width={800}
+                  height={500}
+                  style={{ width: "100%", height: "auto", display: "block" }}
+                />
+              </div>
             </div>
           </div>
           <p
@@ -622,7 +670,7 @@ export default function CaseStudyClient() {
             }}
           >
             (yes — this moodboard was made entirely inside cache. paste,
-            arrange, export. no figma detour.)
+            arrange, export! :))
           </p>
           <div className={styles.refGrid}>
             <motion.div whileHover={{ y: -4 }} className={styles.refCard}>
