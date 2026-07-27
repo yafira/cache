@@ -2182,7 +2182,7 @@ ${customFontFaces}
                           }}
                           onBlur={(e) => {
                             updateElement(el.id, {
-                              text: e.currentTarget.textContent,
+                              text: e.currentTarget.innerText,
                             });
                             setEditingId(null);
                           }}

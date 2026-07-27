@@ -127,6 +127,19 @@ extra config.
 
 ## known limits of this starter (the real v2 list)
 
+- **manual line breaks in a text card were being silently lost.** Double-click to edit, press Enter to
+  force a line break, click away — the break looked right while editing, then collapsed back into one
+  line. The save-on-blur handler read `e.currentTarget.textContent`, which is purely text-based and
+  ignores block-level DOM structure entirely — it just concatenates every text node together with
+  nothing in between, so whatever `<div>`/`<br>` the browser inserted for the Enter key got thrown
+  away. Fixed by reading `.innerText` instead, which is layout-aware and correctly turns visual line
+  breaks back into real `\n` characters. Separately, worth knowing this doesn't fix: natural
+  word-wrap (no manual break, just the browser deciding where to wrap based on box width and font)
+  will never pixel-match an external reference image exactly, since that depends on the actual font
+  and box width in use here versus whatever tool made the reference — that's not a bug, just how text
+  reflow works. If an exact wrap point matters, typing the break yourself (now working correctly) is
+  the reliable way to guarantee it regardless of box width.
+
 - **rotation now has a real rotary knob instead of a slider, and it sweeps the full circle.** It's
   the one control where the metaphor is exact rather than borrowed — turning a dial and rotating a
   piece are the same motion, unlike font size/opacity/corner radius, where a knob would just be a
