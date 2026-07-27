@@ -909,13 +909,20 @@ export default function CaseStudyClient() {
           </div>
           <h2 className={styles.sectionTitle}>the honest roadmap</h2>
           <p className={styles.prose}>
-            not yet built, on purpose: multi-select and group-move for arranging
-            more than one piece at a time; stashes, the folder layer above a
-            single patch, once the core loop has been used by more than one
-            person; connections and flows between pieces, which stay explicitly
-            out of scope until the basic loop is proven. move sharing off the
-            url hash and onto real storage once boards start carrying real
-            files.
+            not yet built, on purpose: <b>selecting an arbitrary subset</b> of
+            pieces — right now selection is all-or-one (select-all, or click a
+            single piece), with no shift-click or rubber-band way to grab just
+            three specific pieces out of ten. Also missing:{" "}
+            <b>live group-dragging</b> — a full selection can be copied and
+            pasted back as a group, keeping every piece's position relative to
+            the others, but there's no way yet to grab several selected pieces
+            and drag them together with the mouse in real time; dragging still
+            only ever moves one piece. Beyond that: stashes, the folder layer
+            above a single patch, once the core loop has been used by more than
+            one person; connections and flows between pieces, which stay
+            explicitly out of scope until the basic loop is proven; and moving
+            sharing off the url hash and onto real storage once boards start
+            carrying real files.
           </p>
         </motion.section>
       </div>
