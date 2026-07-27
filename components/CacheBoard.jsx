@@ -711,7 +711,20 @@ export default function CacheBoard() {
     pushHistory(elements);
 
     try {
-      const { removeBackground } = await import("@imgly/background-removal");
+      // Loaded from a CDN URL (not the bare "@imgly/background-removal"
+      // specifier) with webpackIgnore so Next's webpack never statically
+      // resolves/bundles this import — and therefore never pulls in
+      // onnxruntime-web as a local webpack module either. That local
+      // bundling is what was breaking: webpack rewrites onnxruntime-web's
+      // internal `import.meta.url` to a static value, which its own
+      // WASM/worker-loading code then can't use to construct a URL,
+      // throwing "RelativeURL ... url.replace is not a function". Loading
+      // straight from esm.sh sidesteps that class of bug completely, since
+      // nothing in this import graph passes through our webpack build.
+      const { removeBackground } = await import(
+        /* webpackIgnore: true */
+        "https://esm.sh/@imgly/background-removal@1.7.0"
+      );
       // el.src is always a data: URL (that's how every image is stored
       // here). The library's own string-handling has a real bug for this:
       // it checks isAbsoluteURI() with a regex requiring "//" right after
@@ -725,6 +738,14 @@ export default function CacheBoard() {
       const blob = await removeBackground(srcBlob, {
         publicPath:
           "https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/",
+        // onnxruntime-web's default worker path calls `new Worker(new URL(...,
+        // import.meta.url))` internally — webpack statically rewrites
+        // import.meta.url at build time, which breaks that URL construction
+        // and is exactly what throws "RelativeURL ... url.replace is not a
+        // function". Forcing the computation onto the main thread sidesteps
+        // that code path entirely. Tradeoff: the tab may briefly stutter
+        // while a removal is running, since it's no longer off-thread.
+        proxyToWorker: false,
       });
       const reader = new FileReader();
       reader.onload = () => {
