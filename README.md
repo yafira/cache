@@ -140,15 +140,18 @@ extra config.
   requirement. Verified by starting a real production server and checking the actual response headers
   with `curl -I`, not just trusting the config file looked right. **This alone wasn't sufficient** —
   see the next entry for the actual root cause.
-- **the real root cause of background removal failing: `TypeError: e.replace is not a function`**,
-  thrown inside the library's own minified code. The library normally auto-detects where its own
-  WASM/model assets live (via `import.meta.url` internally) — under Next.js's webpack bundling, that
-  resolves to something that isn't a plain string, and the library's internal path logic calling
-  `.replace()` on it throws. Fixed by passing an explicit `publicPath` to `removeBackground()`
-  (`https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/`, matching the exact installed
-  version), bypassing the auto-detection entirely instead of trying to fix why it resolves incorrectly
-  under this bundler. Confirmed the exact URL pattern and version string directly from the installed
-  package's source rather than trusting the README text alone.
+- **the actual root cause of `TypeError: e.replace is not a function`, found by reading the library's
+  source directly** (two earlier hypotheses — the headers above, then a guess about `publicPath`
+  auto-detection via `import.meta.url` — were both reasonable but wrong, and passing an explicit
+  `publicPath` didn't fix it either). The real bug: `el.src` is always a `data:` URL here (that's how
+  every image is stored), and the library's own `isAbsoluteURI()` check uses a regex requiring `//`
+  right after the scheme — matches `http://`, `https://`, but a `data:` URI has no `//` after `data:`.
+  The library wrongly concludes the data URL is a _relative_ path and tries to resolve it against
+  `publicPath`, which breaks downstream. Fixed by converting the data URL to a `Blob` ourselves before
+  calling `removeBackground()` (`await (await fetch(el.src)).blob()`) — the library handles `Blob`
+  input through a completely different, correct code path, unaffected by the string-URI bug. Found by
+  installing the exact package version locally and grepping its source for every `.replace()` call
+  rather than guessing from the outside.
 
 - **the patch now actually fills the mobile screen.** It was fitting to width only, which works fine
   on desktop because laptop screens are close enough in aspect ratio to the 1400x900 board that

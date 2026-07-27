@@ -619,15 +619,17 @@ export default function CacheBoard() {
 
     try {
       const { removeBackground } = await import("@imgly/background-removal");
-      // the library normally auto-detects where its own WASM/model assets
-      // live (usually via import.meta.url internally) — under Next.js's
-      // webpack bundling that resolves to something that isn't a plain
-      // string, and the library's internal path logic calling .replace()
-      // on it throws ("e.replace is not a function"). Passing an explicit
-      // publicPath bypasses that auto-detection entirely, pointing straight
-      // at IMG.LY's CDN (the same default the library would have computed
-      // if the auto-detection had worked).
-      const blob = await removeBackground(el.src, {
+      // el.src is always a data: URL (that's how every image is stored
+      // here). The library's own string-handling has a real bug for this:
+      // it checks isAbsoluteURI() with a regex requiring "//" right after
+      // the scheme (matches "http://", "https://") — a data: URI has no "//"
+      // after "data:", so the library wrongly treats our base64 string as a
+      // *relative* path and tries to resolve it against publicPath, which
+      // breaks downstream ("e.replace is not a function"). Converting to a
+      // Blob ourselves first sends it through the library's Blob path
+      // instead, which is unaffected by that bug.
+      const srcBlob = await (await fetch(el.src)).blob();
+      const blob = await removeBackground(srcBlob, {
         publicPath:
           "https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/",
       });
