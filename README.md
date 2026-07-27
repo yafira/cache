@@ -14,10 +14,9 @@ a moodboard tool that pastes, drags, and styles like you actually think — no f
   4. The moodboard patch itself, exported from cache (section 05, right after #3)
 -->
 
-![empty patch, mid-paste](./docs/screenshot-01-paste.png)
-![link and file cards](./docs/screenshot-02-link-file-cards.png)
-![full patch at real size](./docs/screenshot-03-full-patch.png)
-![the moodboard, built inside cache](./docs/screenshot-04-moodboard.png)
+![empty patch, mid-paste](./screenshots/01-paste.png)
+![link and file cards](./screenshots/02-link-file-cards.gif)
+![full patch at real size](./screenshots/03-full-patch.png)
 
 ## running it
 
@@ -124,6 +123,12 @@ the evolution steps, reference cards, bug cards, and vocabulary cells.
 `app/icon.svg` is the same patch mark used throughout the app (white fabric, lavender stitching, the
 embroidered ⌘v) — Next.js auto-detects this filename and serves it as the favicon/app icon with no
 extra config.
+
+## inspiration
+
+![the moodboard, built inside cache](./screenshots/04-braun.png)
+![the moodboard, built inside cache](./screenshots/04-tag.png)
+![the moodboard, built inside cache](./screenshots/04-instrument.gif)
 
 ## known limits of this starter (the real v2 list)
 
