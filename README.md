@@ -127,6 +127,21 @@ extra config.
 
 ## known limits of this starter (the real v2 list)
 
+- **the floating style panel can now be dragged out of the way.** It always opens at a fixed
+  top-right position, which meant it could sit directly on top of whatever you just selected — most
+  noticeable with a large image. A small "drag to move" handle at the top of the panel lets you
+  reposition it anywhere; double-clicking the handle resets it back to the default spot. Position
+  persists for the session (not per-piece) — once it's out of the way, it stays out of the way for
+  the next selection too.
+
+- **pasted/uploaded content no longer auto-selects.** The floating style panel opens whenever
+  something's selected, and every new piece used to auto-select itself — for a freshly pasted image,
+  that meant the panel immediately covered the thing you just added, before you'd even seen it.
+  `addElement()` now takes an `{ autoSelect }` option: images, links, and files (paste, drop, or
+  upload) land without selecting themselves, so the panel stays out of the way. Text and color blocks
+  added via the toolbar still auto-select — those are deliberate "add a stylable thing" actions where
+  opening the panel immediately is the expected next step.
+
 - **background removal was failing outright** — `@imgly/background-removal`'s own docs are explicit
   that `SharedArrayBuffer` needs to be available for its WASM execution, which requires two response
   headers (`Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy`) to cross-origin-

@@ -263,6 +263,8 @@ export default function CacheBoard() {
   const linkButtonRef = useRef(null);
   const fileUploadInputRef = useRef(null);
   const [downloadPanelOpen, setDownloadPanelOpen] = useState(false);
+  const [panelPos, setPanelPos] = useState({ x: 0, y: 0 });
+  const panelDragRef = useRef(null);
   const downloadPanelRef = useRef(null);
   const downloadButtonRef = useRef(null);
   const [copyStatus, setCopyStatus] = useState("");
@@ -401,7 +403,7 @@ export default function CacheBoard() {
     return () => clearTimeout(autosaveTimer.current);
   }, [elements, canvasBg, canvasPattern, canvasImage]);
 
-  const addElement = useCallback((el) => {
+  const addElement = useCallback((el, { autoSelect = true } = {}) => {
     zCounter.current += 1;
     const full = {
       rotation: 0,
@@ -414,7 +416,7 @@ export default function CacheBoard() {
       pushHistory(prev);
       return [...prev, full];
     });
-    setSelectedId(full.id);
+    if (autoSelect) setSelectedId(full.id);
   }, []);
 
   const addText = () => {
@@ -461,20 +463,23 @@ export default function CacheBoard() {
     } catch {
       // keep raw url as fallback
     }
-    addElement({
-      id,
-      type: "link",
-      url,
-      title: domain,
-      description: "",
-      image: null,
-      domain,
-      x: BOARD_W / 2 - 130 + dx,
-      y: BOARD_H / 2 - 80 + dy,
-      w: 260,
-      h: 160,
-      radius: 0,
-    });
+    addElement(
+      {
+        id,
+        type: "link",
+        url,
+        title: domain,
+        description: "",
+        image: null,
+        domain,
+        x: BOARD_W / 2 - 130 + dx,
+        y: BOARD_H / 2 - 80 + dy,
+        w: 260,
+        h: 160,
+        radius: 0,
+      },
+      { autoSelect: false },
+    );
 
     fetch(`/api/unfurl?url=${encodeURIComponent(url)}`)
       .then((res) => res.json())
@@ -509,19 +514,22 @@ export default function CacheBoard() {
     const { dx, dy } = nextOffset();
     const reader = new FileReader();
     reader.onload = () => {
-      addElement({
-        id: newId(),
-        type: "file",
-        name: file.name,
-        fileType: file.type || "application/octet-stream",
-        size: file.size,
-        dataUrl: reader.result,
-        x: BOARD_W / 2 - 110 + dx,
-        y: BOARD_H / 2 - 70 + dy,
-        w: 220,
-        h: 140,
-        radius: 0,
-      });
+      addElement(
+        {
+          id: newId(),
+          type: "file",
+          name: file.name,
+          fileType: file.type || "application/octet-stream",
+          size: file.size,
+          dataUrl: reader.result,
+          x: BOARD_W / 2 - 110 + dx,
+          y: BOARD_H / 2 - 70 + dy,
+          w: 220,
+          h: 140,
+          radius: 0,
+        },
+        { autoSelect: false },
+      );
     };
     reader.readAsDataURL(file);
   };
@@ -541,16 +549,19 @@ export default function CacheBoard() {
           const baseY = dropPos
             ? dropPos.y - targetH / 2
             : BOARD_H / 2 - targetH / 2;
-          addElement({
-            id: newId(),
-            type: "image",
-            src,
-            x: baseX + dx + i * 24,
-            y: baseY + dy + i * 24,
-            w: targetW,
-            h: targetH,
-            radius: 0,
-          });
+          addElement(
+            {
+              id: newId(),
+              type: "image",
+              src,
+              x: baseX + dx + i * 24,
+              y: baseY + dy + i * 24,
+              w: targetW,
+              h: targetH,
+              radius: 0,
+            },
+            { autoSelect: false },
+          );
         };
         img.src = src;
       };
@@ -782,6 +793,34 @@ export default function CacheBoard() {
     resizeRef.current = null;
     window.removeEventListener("pointermove", onPointerMoveResize);
     window.removeEventListener("pointerup", onPointerUpResize);
+  };
+
+  // dragging the style panel itself — separate from dragging pieces on the
+  // board. Position persists for the session (not per-piece), so once it's
+  // moved out of the way it stays out of the way for the next selection too.
+  const onPointerDownPanelDrag = (e) => {
+    e.stopPropagation();
+    panelDragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: panelPos.x,
+      origY: panelPos.y,
+    };
+    window.addEventListener("pointermove", onPointerMovePanelDrag);
+    window.addEventListener("pointerup", onPointerUpPanelDrag);
+  };
+  const onPointerMovePanelDrag = (e) => {
+    const d = panelDragRef.current;
+    if (!d) return;
+    setPanelPos({
+      x: d.origX + (e.clientX - d.startX),
+      y: d.origY + (e.clientY - d.startY),
+    });
+  };
+  const onPointerUpPanelDrag = () => {
+    panelDragRef.current = null;
+    window.removeEventListener("pointermove", onPointerMovePanelDrag);
+    window.removeEventListener("pointerup", onPointerUpPanelDrag);
   };
 
   // export to PNG (always renders at full BOARD_W/BOARD_H regardless of on-screen scale)
@@ -1873,7 +1912,18 @@ ${customFontFaces}
 
         {/* style panel: floats in on desktop when something's selected, bottom sheet on mobile */}
         {!isMobile && selected && (
-          <div className={styles.panel}>
+          <div
+            className={styles.panel}
+            style={{ transform: `translate(${panelPos.x}px, ${panelPos.y}px)` }}
+          >
+            <div
+              className={styles.panelDragHandle}
+              onPointerDown={onPointerDownPanelDrag}
+              onDoubleClick={() => setPanelPos({ x: 0, y: 0 })}
+              title="drag to move, double-click to reset position"
+            >
+              ⠿ drag to move
+            </div>
             <StylePanelContent
               selected={selected}
               isMobile={isMobile}
