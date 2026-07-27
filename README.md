@@ -175,19 +175,31 @@ extra config.
   those images as a side effect. `credentialless` cross-origin-isolates the page without that
   requirement. Verified by starting a real production server and checking the actual response headers
   with `curl -I`, not just trusting the config file looked right. **This alone wasn't sufficient** —
-  see the next entry for the actual root cause.
-- **the actual root cause of `TypeError: e.replace is not a function`, found by reading the library's
-  source directly** (two earlier hypotheses — the headers above, then a guess about `publicPath`
-  auto-detection via `import.meta.url` — were both reasonable but wrong, and passing an explicit
-  `publicPath` didn't fix it either). The real bug: `el.src` is always a `data:` URL here (that's how
-  every image is stored), and the library's own `isAbsoluteURI()` check uses a regex requiring `//`
-  right after the scheme — matches `http://`, `https://`, but a `data:` URI has no `//` after `data:`.
-  The library wrongly concludes the data URL is a _relative_ path and tries to resolve it against
-  `publicPath`, which breaks downstream. Fixed by converting the data URL to a `Blob` ourselves before
-  calling `removeBackground()` (`await (await fetch(el.src)).blob()`) — the library handles `Blob`
-  input through a completely different, correct code path, unaffected by the string-URI bug. Found by
-  installing the exact package version locally and grepping its source for every `.replace()` call
-  rather than guessing from the outside.
+  see the next entry for a real bug that was fixed, and the one after that for why the feature is
+  disabled regardless.
+- **a real bug, found and fixed:** `TypeError: e.replace is not a function`, found by reading the
+  library's source directly (two earlier hypotheses — the headers above, then a guess about
+  `publicPath` auto-detection via `import.meta.url` — were both reasonable but wrong, and passing an
+  explicit `publicPath` didn't fix it either). The real bug: `el.src` is always a `data:` URL here
+  (that's how every image is stored), and the library's own `isAbsoluteURI()` check uses a regex
+  requiring `//` right after the scheme — matches `http://`, `https://`, but a `data:` URI has no `//`
+  after `data:`. The library wrongly concludes the data URL is a _relative_ path and tries to resolve
+  it against `publicPath`, which breaks downstream. Fixed by converting the data URL to a `Blob`
+  ourselves before calling `removeBackground()` (`await (await fetch(el.src)).blob()`) — the library
+  handles `Blob` input through a completely different, correct code path, unaffected by the string-URI
+  bug. Found by installing the exact package version locally and grepping its source for every
+  `.replace()` call rather than guessing from the outside.
+- **`BG_REMOVAL_ENABLED = false` — the feature is disabled, on purpose, for a different reason than
+  either bug above.** After the Blob fix, the _same_ error persisted — but the stack trace this time
+  showed the crash happening inside `onnxruntime-web`'s own bundled WASM-loading code (a function
+  literally named `RelativeURL`, inside `ort.bundle.min.mjs`), not in `@imgly/background-removal`'s
+  JS or in anything this app controls. That's squarely the subsystem covered by the library's own
+  compatibility note: "currently only NextJS 15 is supported." This app runs Next.js 14.2.5. The real
+  fix is a Next.js major version upgrade — legitimate work, with its own real regression risk, worth
+  doing deliberately rather than under deadline pressure. Set `BG_REMOVAL_ENABLED` back to `true` in
+  `components/CacheBoard.jsx` once that upgrade happens (or once a newer `onnxruntime-web` ships that
+  doesn't hit this under Next 14's webpack config) — everything else (the Blob fix, the headers, the
+  UI) is still intact and ready to go, nothing was deleted.
 
 - **the patch now actually fills the mobile screen.** It was fitting to width only, which works fine
   on desktop because laptop screens are close enough in aspect ratio to the 1400x900 board that

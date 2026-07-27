@@ -27,6 +27,15 @@ const BOARD_W = 1400;
 const BOARD_H = 900;
 const MOBILE_BREAKPOINT = 768;
 
+// Client-side background removal via @imgly/background-removal. Runs
+// entirely in the browser (ONNX/WASM model fetched from imgly's CDN at
+// runtime), so it works on Vercel with no server-side image processing.
+// Requires Next.js 15+ — @imgly/background-removal's WASM loader hits a
+// webpack incompatibility under Next.js 14 (traces into onnxruntime-web's
+// bundled RelativeURL helper); the library's docs only claim support for
+// Next.js 15+.
+const BG_REMOVAL_ENABLED = true;
+
 // monochrome chrome + three pastel accents, each doing exactly one job —
 // lavender marks selection, butter marks the primary action, pink marks resize
 const INK = "#0d0d0c";
@@ -644,7 +653,7 @@ export default function CacheBoard() {
 
   // resolves a text element's fontFamily (a preset id, or "custom:<id>")
   // into { cssVar, family } — cssVar for live rendering, family for canvas
-  // export and document.fonts.load()
+  // export and document.fonts.load() readiness checks
   const resolveFont = (fontFamily) => {
     if (fontFamily?.startsWith("custom:")) {
       const id = fontFamily.slice(7);
@@ -2300,7 +2309,7 @@ function StylePanelContent({
         </div>
       </div>
 
-      {selected.type === "image" && (
+      {selected.type === "image" && BG_REMOVAL_ENABLED && (
         <div className={styles.field}>
           background removal
           {bgRemovalId === selected.id ? (
