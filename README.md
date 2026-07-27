@@ -50,11 +50,11 @@ then open http://localhost:3000
 Every tool in this space names its unit of work differently — Figma has files, Are.na has
 channels, Notion has pages, Cosmos has clusters. Cache's naming:
 
-| generic term | cache's word |
-| --- | --- |
-| board / canvas | **patch** |
-| folder (a group of patches) | **stash** |
-| saved / saved to database | **cached** |
+| generic term                | cache's word |
+| --------------------------- | ------------ |
+| board / canvas              | **patch**    |
+| folder (a group of patches) | **stash**    |
+| saved / saved to database   | **cached**   |
 
 A patch is the single infinite canvas — what `CacheBoard.jsx` renders. A stash is the
 organizational layer above it (a folder of patches) — not built in this starter; see the
@@ -138,7 +138,17 @@ extra config.
   that don't send `Cross-Origin-Resource-Policy` headers, and `require-corp` would've silently broken
   those images as a side effect. `credentialless` cross-origin-isolates the page without that
   requirement. Verified by starting a real production server and checking the actual response headers
-  with `curl -I`, not just trusting the config file looked right.
+  with `curl -I`, not just trusting the config file looked right. **This alone wasn't sufficient** —
+  see the next entry for the actual root cause.
+- **the real root cause of background removal failing: `TypeError: e.replace is not a function`**,
+  thrown inside the library's own minified code. The library normally auto-detects where its own
+  WASM/model assets live (via `import.meta.url` internally) — under Next.js's webpack bundling, that
+  resolves to something that isn't a plain string, and the library's internal path logic calling
+  `.replace()` on it throws. Fixed by passing an explicit `publicPath` to `removeBackground()`
+  (`https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/`, matching the exact installed
+  version), bypassing the auto-detection entirely instead of trying to fix why it resolves incorrectly
+  under this bundler. Confirmed the exact URL pattern and version string directly from the installed
+  package's source rather than trusting the README text alone.
 
 - **the patch now actually fills the mobile screen.** It was fitting to width only, which works fine
   on desktop because laptop screens are close enough in aspect ratio to the 1400x900 board that
@@ -167,7 +177,7 @@ extra config.
   cards still read as sitting on something rather than floating on pure white.
 
 - **auto-saves to localStorage, per browser only.** Refreshing the page recovers your last patch —
-  no more losing work on an accidental reload. This is *not* shared, synced across devices, or
+  no more losing work on an accidental reload. This is _not_ shared, synced across devices, or
   backed by any server: it's purely "this browser remembers what was open last." The share link is
   still the only way to hand a patch to someone else, and it's a one-time snapshot, not a live
   document — editing after sharing doesn't update the link you already sent.
