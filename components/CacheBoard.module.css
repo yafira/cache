@@ -208,26 +208,6 @@
   color: #ece7db;
 }
 
-.helpCorner {
-  position: absolute;
-  bottom: 16px;
-  left: 16px;
-  z-index: 20;
-  max-width: 260px;
-  font-size: 10px;
-  color: rgba(236, 231, 219, 0.35);
-  line-height: 1.6;
-  pointer-events: none;
-}
-.helpCorner a {
-  pointer-events: auto;
-  color: rgba(236, 231, 219, 0.6);
-  text-decoration: underline;
-}
-.helpCorner a:hover {
-  color: #ece7db;
-}
-
 .mobileSheet {
   position: absolute;
   bottom: 0;

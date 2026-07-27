@@ -18,6 +18,7 @@ import {
   Save,
   GripVertical,
   Minus,
+  HelpCircle,
 } from "lucide-react";
 import styles from "./CacheBoard.module.css";
 import ColorPicker from "./ColorPicker";
@@ -355,6 +356,9 @@ export default function CacheBoard() {
   const [canvasPattern, setCanvasPattern] = useState("none");
   const [canvasImage, setCanvasImage] = useState(null);
   const [bgPanelOpen, setBgPanelOpen] = useState(false);
+  const [helpPanelOpen, setHelpPanelOpen] = useState(false);
+  const helpPanelRef = useRef(null);
+  const helpButtonRef = useRef(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [bgRemovalId, setBgRemovalId] = useState(null);
   const [customFonts, setCustomFonts] = useState([]); // [{ id, label, family, dataUrl }]
@@ -1499,6 +1503,21 @@ ${customFontFaces}
     return () => window.removeEventListener("pointerdown", onClickOutside);
   }, [bgPanelOpen]);
 
+  // close the help popover when clicking outside it
+  useEffect(() => {
+    if (!helpPanelOpen) return;
+    const onClickOutside = (e) => {
+      if (
+        helpPanelRef.current?.contains(e.target) ||
+        helpButtonRef.current?.contains(e.target)
+      )
+        return;
+      setHelpPanelOpen(false);
+    };
+    window.addEventListener("pointerdown", onClickOutside);
+    return () => window.removeEventListener("pointerdown", onClickOutside);
+  }, [helpPanelOpen]);
+
   // close the link-add popover when clicking outside it
   useEffect(() => {
     if (!linkPanelOpen) return;
@@ -1641,6 +1660,47 @@ ${customFontFaces}
       {/* toolbar */}
       <div className={styles.toolbar}>
         <span className={`fg-brand ${styles.brand}`}>CACHE</span>
+
+        <div style={{ position: "relative" }}>
+          <button
+            ref={helpButtonRef}
+            onClick={() => setHelpPanelOpen((v) => !v)}
+            className={styles.iconBtnPlain}
+            title="help"
+          >
+            <HelpCircle size={15} />
+          </button>
+          {helpPanelOpen && (
+            <div
+              ref={helpPanelRef}
+              className={styles.bgPanel}
+              style={{ width: 240 }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 12,
+                  lineHeight: 1.6,
+                  color: "rgba(236,231,219,0.8)",
+                }}
+              >
+                paste anywhere on the patch, drag the corner dot to resize,
+                double-click text to edit.
+              </p>
+              <a
+                href="/case-study"
+                style={{
+                  fontSize: 12,
+                  color: "#ece7db",
+                  marginTop: 8,
+                  display: "inline-block",
+                }}
+              >
+                how this was built ↗
+              </a>
+            </div>
+          )}
+        </div>
 
         <button onClick={addText} className={styles.btn}>
           <Type size={13} /> <span className={styles.hideOnMobile}>text</span>
@@ -2387,14 +2447,6 @@ ${customFontFaces}
                 fontUploadInputRef={fontUploadInputRef}
               />
             )}
-          </div>
-        )}
-
-        {!isMobile && !selected && (
-          <div className={styles.helpCorner}>
-            paste anywhere on the patch, drag the corner dot to resize,
-            double-click text to edit.{" "}
-            <a href="/case-study">how this was built ↗</a>
           </div>
         )}
 

@@ -127,6 +127,17 @@ extra config.
 
 ## known limits of this starter (the real v2 list)
 
+- **the page-level help text kept overlapping the board, no matter which corner it floated in.** First
+  attempt moved it from bottom-left (where it collided with the board's own HUD readout) to top-left —
+  but the board can extend nearly to the top of the page too, so the light-colored help text (styled
+  for contrast against the dark page background) ended up sitting partly on top of the board's own
+  light background instead, just as illegible. Floating this text anywhere over the canvas area was
+  fundamentally fragile, since the board's size and scroll position vary. Fixed properly by moving it
+  out of the canvas overlay entirely: a small help icon in the toolbar itself opens a popover with the
+  same content. The toolbar and the board are structurally separate regions, so this can't collide
+  with the board regardless of its size, position, or zoom — not a smarter position, a different
+  container.
+
 - **manual line breaks in a text card were being silently lost.** Double-click to edit, press Enter to
   force a line break, click away — the break looked right while editing, then collapsed back into one
   line. The save-on-blur handler read `e.currentTarget.textContent`, which is purely text-based and
