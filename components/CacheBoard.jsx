@@ -2734,8 +2734,8 @@ function StylePanelContent({
 // "the thing it does" are literally the same motion, unlike font size/
 // opacity/corner radius where a knob would just be a slider wearing a
 // costume. The knob's visual angle maps 1:1 to the actual rotation value
-// (both run -45 to 45), so there's no unit conversion happening anywhere —
-// what you see is exactly the number being set.
+// (both run the full -180 to 180), so there's no unit conversion happening
+// anywhere — what you see is exactly the number being set.
 function RotationKnob({ value, onChange, onAdjustStart }) {
   const knobRef = useRef(null);
   const draggingRef = useRef(false);
@@ -2748,7 +2748,7 @@ function RotationKnob({ value, onChange, onAdjustStart }) {
     const dy = clientY - cy;
     let angle = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
     if (angle > 180) angle -= 360;
-    return Math.round(Math.max(-45, Math.min(45, angle)));
+    return Math.round(angle);
   };
 
   const onPointerDown = (e) => {
@@ -2769,9 +2769,9 @@ function RotationKnob({ value, onChange, onAdjustStart }) {
     window.addEventListener("pointerup", onUp);
   };
 
-  // small tick marks around the dial at -45/-22.5/0/22.5/45, for the same
+  // compass-style tick marks every 45° around the full circle, for the same
   // "readable instrument" feel as the corner HUD and selection brackets
-  const ticks = [-45, -22.5, 0, 22.5, 45];
+  const ticks = [-180, -135, -90, -45, 0, 45, 90, 135];
 
   return (
     <div

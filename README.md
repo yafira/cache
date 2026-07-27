@@ -127,12 +127,14 @@ extra config.
 
 ## known limits of this starter (the real v2 list)
 
-- **rotation now has a real rotary knob instead of a slider.** It's the one control where the
-  metaphor is exact rather than borrowed — turning a dial and rotating a piece are the same motion,
-  unlike font size/opacity/corner radius, where a knob would just be a slider in a costume. Drag
-  anywhere around the dial to set the angle; the knob's visual position maps 1:1 to the actual
-  rotation value (both run -45° to 45°), so there's no unit conversion anywhere between what you see
-  and what gets set.
+- **rotation now has a real rotary knob instead of a slider, and it sweeps the full circle.** It's
+  the one control where the metaphor is exact rather than borrowed — turning a dial and rotating a
+  piece are the same motion, unlike font size/opacity/corner radius, where a knob would just be a
+  slider in a costume. Drag anywhere around the dial to set the angle; the knob's visual position maps
+  1:1 to the actual rotation value (both run -180° to 180°), so there's no unit conversion anywhere
+  between what you see and what gets set. Originally shipped clamped to ±45° (inherited from the old
+  slider's range) — a dial that only sweeps a small wedge doesn't read as an actual rotary control, so
+  it now goes all the way around.
 
 - **the floating panel's drag handle is icon-only now** (a grip icon, not a text label) — meant to
   read as intuitively draggable without needing an instruction. The handle row also shows the
