@@ -2687,19 +2687,14 @@ function StylePanelContent({
         </label>
       )}
 
-      <label className={styles.field}>
+      <div className={styles.field}>
         rotation — {selected.rotation ?? 0}°
-        <input
-          onPointerDown={onAdjustStart}
-          type="range"
-          min="-45"
-          max="45"
+        <RotationKnob
           value={selected.rotation ?? 0}
-          onChange={(e) =>
-            updateElement(selected.id, { rotation: Number(e.target.value) })
-          }
+          onChange={(deg) => updateElement(selected.id, { rotation: deg })}
+          onAdjustStart={onAdjustStart}
         />
-      </label>
+      </div>
 
       <label className={styles.field}>
         opacity — {Math.round((selected.opacity ?? 1) * 100)}%
@@ -2732,6 +2727,105 @@ function StylePanelContent({
         </button>
       </div>
     </>
+  );
+}
+
+// a real rotary knob for rotation — the one control where "turn a dial" and
+// "the thing it does" are literally the same motion, unlike font size/
+// opacity/corner radius where a knob would just be a slider wearing a
+// costume. The knob's visual angle maps 1:1 to the actual rotation value
+// (both run -45 to 45), so there's no unit conversion happening anywhere —
+// what you see is exactly the number being set.
+function RotationKnob({ value, onChange, onAdjustStart }) {
+  const knobRef = useRef(null);
+  const draggingRef = useRef(false);
+
+  const angleFromPointer = (clientX, clientY) => {
+    const rect = knobRef.current.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = clientX - cx;
+    const dy = clientY - cy;
+    let angle = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+    if (angle > 180) angle -= 360;
+    return Math.round(Math.max(-45, Math.min(45, angle)));
+  };
+
+  const onPointerDown = (e) => {
+    e.stopPropagation();
+    onAdjustStart?.();
+    draggingRef.current = true;
+    onChange(angleFromPointer(e.clientX, e.clientY));
+    const onMove = (ev) => {
+      if (draggingRef.current)
+        onChange(angleFromPointer(ev.clientX, ev.clientY));
+    };
+    const onUp = () => {
+      draggingRef.current = false;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+
+  // small tick marks around the dial at -45/-22.5/0/22.5/45, for the same
+  // "readable instrument" feel as the corner HUD and selection brackets
+  const ticks = [-45, -22.5, 0, 22.5, 45];
+
+  return (
+    <div
+      ref={knobRef}
+      onPointerDown={onPointerDown}
+      title="drag to rotate"
+      style={{
+        width: 52,
+        height: 52,
+        margin: "6px auto 2px",
+        position: "relative",
+        cursor: "pointer",
+        touchAction: "none",
+      }}
+    >
+      <svg
+        width="52"
+        height="52"
+        viewBox="0 0 52 52"
+        style={{ position: "absolute", inset: 0 }}
+      >
+        <circle
+          cx="26"
+          cy="26"
+          r="24"
+          fill="#1c1b19"
+          stroke="rgba(236,231,219,0.3)"
+          strokeWidth="1.5"
+        />
+        {ticks.map((t) => (
+          <line
+            key={t}
+            x1="26"
+            y1="4"
+            x2="26"
+            y2="8"
+            stroke="rgba(236,231,219,0.35)"
+            strokeWidth="1.5"
+            transform={`rotate(${t} 26 26)`}
+          />
+        ))}
+        <line
+          x1="26"
+          y1="26"
+          x2="26"
+          y2="8"
+          stroke="#ece7db"
+          strokeWidth="2"
+          strokeLinecap="round"
+          transform={`rotate(${value ?? 0} 26 26)`}
+        />
+        <circle cx="26" cy="26" r="3" fill="#ece7db" />
+      </svg>
+    </div>
   );
 }
 

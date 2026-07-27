@@ -650,9 +650,10 @@ export default function CaseStudyClient() {
                 instrument panels / hud readouts
               </div>
               <div className={styles.refCardNote}>
-                the corner readout (dimensions, item count) and the
-                viewfinder-bracket selection marks both borrow from technical
-                displays rather than soft craft-tool ui.
+                the corner readout, the viewfinder-bracket selection marks, and
+                the rotation control itself — a real dial you turn, not a slider
+                wearing a costume — all come from the same place: technical
+                displays, not soft craft-tool ui.
               </div>
             </motion.div>
           </div>
