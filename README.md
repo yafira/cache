@@ -142,11 +142,14 @@ extra config.
 - **cmd/ctrl+s (or the new save button next to undo) saves immediately**, bypassing the normal
   500ms autosave debounce, and shows a status message ("cached" or a real error if it fails) so
   there's confidence the save actually happened — useful right before closing the tab.
-- **cmd/ctrl+x cuts the selected piece**, and right-clicking any piece opens a menu with cut,
-  duplicate, and delete. Right-clicking empty patch space opens a "paste" option if something's been
-  cut, placing it at the cursor. Deliberately not wired into the existing cmd+v paste handler or the
-  OS clipboard — that shortcut already means "paste from outside the app" (an image, a link, text),
-  and blending the two risked real ambiguity about which one wins on a given paste.
+- **cmd/ctrl+c copies, cmd/ctrl+x cuts** — either the single selected piece, or, with select-all
+  active (cmd/ctrl+a), every piece on the patch at once. Right-clicking any single piece opens a menu
+  with copy, cut, duplicate, and delete. Right-clicking empty patch space opens "paste," which places
+  whatever's in the clipboard at the cursor — a copied _group_ pastes back as a group, keeping every
+  piece's position relative to the others, not stacked on top of each other. Pasting more than one
+  piece is a single undo step, not one per piece. Deliberately not wired into the existing cmd+v paste
+  handler or the OS clipboard — that shortcut already means "paste from outside the app" (an image, a
+  link, text), and blending the two risked real ambiguity about which one wins on a given paste.
 
 - **the floating style panel can now be dragged out of the way.** It always opens at a fixed
   top-right position, which meant it could sit directly on top of whatever you just selected — most
@@ -163,43 +166,32 @@ extra config.
   added via the toolbar still auto-select — those are deliberate "add a stylable thing" actions where
   opening the panel immediately is the expected next step.
 
-- **background removal was failing outright** — `@imgly/background-removal`'s own docs are explicit
-  that `SharedArrayBuffer` needs to be available for its WASM execution, which requires two response
-  headers (`Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy`) to cross-origin-
-  isolate the page. Without them, some `onnxruntime-web` WASM paths throw outright instead of
-  gracefully falling back to a slower single-threaded mode — which matches failing consistently on
-  both localhost and production, since it's a config gap, not a network issue. Added both headers via
-  `next.config.mjs`'s `headers()`. Used `Cross-Origin-Embedder-Policy: credentialless` specifically,
-  not the stricter `require-corp` — link cards load preview images from arbitrary third-party sites
-  that don't send `Cross-Origin-Resource-Policy` headers, and `require-corp` would've silently broken
-  those images as a side effect. `credentialless` cross-origin-isolates the page without that
-  requirement. Verified by starting a real production server and checking the actual response headers
-  with `curl -I`, not just trusting the config file looked right. **This alone wasn't sufficient** —
-  see the next entry for a real bug that was fixed, and the one after that for why the feature is
-  disabled regardless.
-- **a real bug, found and fixed:** `TypeError: e.replace is not a function`, found by reading the
-  library's source directly (two earlier hypotheses — the headers above, then a guess about
-  `publicPath` auto-detection via `import.meta.url` — were both reasonable but wrong, and passing an
-  explicit `publicPath` didn't fix it either). The real bug: `el.src` is always a `data:` URL here
-  (that's how every image is stored), and the library's own `isAbsoluteURI()` check uses a regex
-  requiring `//` right after the scheme — matches `http://`, `https://`, but a `data:` URI has no `//`
-  after `data:`. The library wrongly concludes the data URL is a _relative_ path and tries to resolve
-  it against `publicPath`, which breaks downstream. Fixed by converting the data URL to a `Blob`
-  ourselves before calling `removeBackground()` (`await (await fetch(el.src)).blob()`) — the library
-  handles `Blob` input through a completely different, correct code path, unaffected by the string-URI
-  bug. Found by installing the exact package version locally and grepping its source for every
-  `.replace()` call rather than guessing from the outside.
-- **`BG_REMOVAL_ENABLED = false` — the feature is disabled, on purpose, for a different reason than
-  either bug above.** After the Blob fix, the _same_ error persisted — but the stack trace this time
-  showed the crash happening inside `onnxruntime-web`'s own bundled WASM-loading code (a function
-  literally named `RelativeURL`, inside `ort.bundle.min.mjs`), not in `@imgly/background-removal`'s
-  JS or in anything this app controls. That's squarely the subsystem covered by the library's own
-  compatibility note: "currently only NextJS 15 is supported." This app runs Next.js 14.2.5. The real
-  fix is a Next.js major version upgrade — legitimate work, with its own real regression risk, worth
-  doing deliberately rather than under deadline pressure. Set `BG_REMOVAL_ENABLED` back to `true` in
-  `components/CacheBoard.jsx` once that upgrade happens (or once a newer `onnxruntime-web` ships that
-  doesn't hit this under Next 14's webpack config) — everything else (the Blob fix, the headers, the
-  UI) is still intact and ready to go, nothing was deleted.
+- **background removal is working now** — `BG_REMOVAL_ENABLED = true` in `components/CacheBoard.jsx`.
+  Getting here took three real attempts, worth recording honestly since the failures were as
+  instructive as the fix:
+  1. First hypothesis: `@imgly/background-removal` needs `SharedArrayBuffer`, which needs
+     cross-origin isolation headers. Added `Cross-Origin-Opener-Policy` /
+     `Cross-Origin-Embedder-Policy: credentialless` (not the stricter `require-corp`, which
+     would've silently broken link-card preview images loaded from third-party sites with no
+     `Cross-Origin-Resource-Policy` header). Verified the headers actually landed via `curl -I`
+     against a real production server. **Didn't fix it.**
+  2. Second, a real bug, found and fixed: the library's `isAbsoluteURI()` check uses a regex
+     requiring `//` right after the scheme (matches `http://`, not `data:`) — so it misread every
+     pasted image's `data:` URL as a relative path. Fixed by converting to a `Blob` before calling
+     `removeBackground()`. A genuine bug, confirmed by installing the package locally and reading
+     its source — but **the same error persisted anyway**, meaning this wasn't the actual blocker
+     either.
+  3. The real cause: the crash traced into `onnxruntime-web`'s own bundled WASM-loading code (a
+     function named `RelativeURL`), which is exactly the subsystem `@imgly/background-removal`'s
+     docs warn about — "currently only NextJS 15 is supported," and this app was on 14.2.5.
+     The actual fix, once the app was upgraded to Next.js 15: load the library from a CDN
+     (`https://esm.sh/@imgly/background-removal@1.7.0`) with a `/* webpackIgnore: true */` comment on
+     the dynamic `import()`, instead of importing the local `node_modules` copy. Webpack never touches
+     a webpack-ignored import, so it never rewrites `onnxruntime-web`'s internal `import.meta.url` —
+     which is what was breaking `RelativeURL`'s WASM-path construction in the first place. Also passes
+     `proxyToWorker: false` to keep the whole computation on the main thread rather than a Worker
+     (worker construction hits the same `import.meta.url` pattern) — the tradeoff is a brief stutter
+     while a removal is running, since it's no longer off-thread.
 
 - **the patch now actually fills the mobile screen.** It was fitting to width only, which works fine
   on desktop because laptop screens are close enough in aspect ratio to the 1400x900 board that
@@ -296,9 +288,10 @@ extra config.
   or a client-side segmentation model under a more permissive license (matting quality varies more by
   model than this library's purpose-built one).
 - **background removal runs entirely client-side** — a WASM/ONNX model loads in the browser (via
-  `import("@imgly/background-removal")`, code-split so it doesn't bloat the initial bundle) and
-  processes the image locally. First use in a session will be slower while the model downloads;
-  subsequent removals in the same session are faster.
+  a `webpackIgnore`d dynamic `import()` from `esm.sh`, so webpack never bundles or touches it — see
+  the entry above for why that specifically matters) and processes the image locally. First use in a
+  session will be slower while the model downloads; subsequent removals in the same session are
+  faster.
 - **the original image is kept** as `originalSrc` on the element once background removal runs once,
   so "restore original" is always available without needing undo. Worth knowing: this roughly doubles
   that image's payload size in the share-link hash, compounding the size caveat already noted above.
@@ -315,14 +308,34 @@ extra config.
 - **no stashes yet** — this starter is a single patch with no organizational layer above it.
   a `stashes` table (id, name, owner) with a `patch_id -> stash_id` foreign key is the natural
   shape once patches need grouping.
+- **v2 idea: a visible history of previous patches.** Right now there's exactly one patch per browser
+  (the IndexedDB autosave holds a single `lastPatch`, overwritten every time). A real "see your past
+  cacheboards" gallery — thumbnails of previous patches you can reopen — is a genuinely different
+  feature from stashes (stashes group patches you're actively organizing; this is closer to a
+  browsing history/version list of everything you've ever made). Needs each save to become its own
+  row (`patches` table: `id`, `created_at`, a thumbnail, the board JSON) instead of one overwritten
+  key, plus a small gallery view to browse them. Not attempting this now — noting it here on purpose
+  as a real v2 direction rather than scope-creeping it into this pass.
 - **background images make the share-link hash very long.** The URL-hash sharing trick already had
   a size ceiling; a background image (base64-encoded) makes that much more likely to matter. This is
   the clearest sign it's time to move share-links to a real `boards` table + short id (see above)
   rather than pushing the hash approach further.
-- **share link has no backend.** it packs the whole board into the URL hash as base64 JSON, so it
-  round-trips with zero infrastructure but the link gets long and won't survive across
-  devices/browsers cleanly. swap in: a `boards` table, a random board id + a separate edit-token,
-  and the link becomes `/b/{id}`. same no-account-required UX, real persistence.
+- **share link has no backend, but it's now gzip-compressed instead of just base64'd.** The original
+  encoding was `btoa(encodeURIComponent(json))` — `encodeURIComponent` triples every quote character
+  into `%22` _before_ base64 even runs, then base64 adds its own ~33% on top of that already-bloated
+  string. For a real patch with several pieces, this was making links 2-3x longer than necessary for
+  no reason. Now: straight to UTF-8 bytes (no percent-encoding detour), gzipped via the native
+  `CompressionStream`/`DecompressionStream` APIs, then base64url-encoded. For an empty board this is
+  actually slightly worse (gzip's fixed header overhead isn't worth it for ~80 bytes of JSON), but for
+  a real patch with a handful of pieces — where JSON keys like `type`/`x`/`y`/`w`/`h`/`rotation`/
+  `opacity` repeat across every element and compress very well — this cuts a real link by roughly 85%.
+  Old links (from before this change) still work: decoding tries the new format first and falls back
+  to the old plain-base64 format if that fails. **Still doesn't fix the actual ceiling** — compression
+  helps text-heavy JSON a lot, but does very little for embedded images, which are already
+  dense/near-random base64 and don't compress meaningfully. A patch with a background image or a few
+  photos will still produce a huge link. The real fix is still what it always was: a `boards` table, a
+  random board id + a separate edit-token, and the link becomes `/b/{id}`. Same no-account-required
+  UX, no size ceiling at all.
 - **no accounts yet** — the guest-edit-token pattern above is what makes "save it later" possible
   without forcing signup up front.
 - **connections/flows between pieces** were intentionally left out of this pass — good v2 candidate

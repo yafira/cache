@@ -288,6 +288,55 @@ async function idbGet(key) {
   });
 }
 
+// share-link encoding — gzip-compressed, base64url. The previous version did
+// btoa(encodeURIComponent(json)): encodeURIComponent triples every non-ASCII
+// or quote character into "%XX" *before* base64 even runs, then base64 adds
+// its own ~33% overhead on top of that already-bloated string — for a real
+// patch with several pieces this was making links 2-3x longer than
+// necessary. This version converts straight to UTF-8 bytes (no percent-
+// encoding detour) and gzips before encoding, a large win specifically
+// because JSON with repeated keys (every element has "type", "x", "y", "w",
+// "h", "rotation", "opacity"...) compresses very well.
+async function compressToBase64Url(obj) {
+  const json = JSON.stringify(obj);
+  const bytes = new TextEncoder().encode(json);
+  const cs = new CompressionStream("gzip");
+  const writer = cs.writable.getWriter();
+  writer.write(bytes);
+  writer.close();
+  const compressed = new Uint8Array(
+    await new Response(cs.readable).arrayBuffer(),
+  );
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < compressed.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(
+      null,
+      compressed.subarray(i, i + chunkSize),
+    );
+  }
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+async function decompressFromBase64Url(str) {
+  const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const ds = new DecompressionStream("gzip");
+  const writer = ds.writable.getWriter();
+  writer.write(bytes);
+  writer.close();
+  const text = new TextDecoder().decode(
+    await new Response(ds.readable).arrayBuffer(),
+  );
+  return JSON.parse(text);
+}
+
 function loadImage(src, allowCrossOrigin) {
   return new Promise((resolve) => {
     const img = new window.Image();
@@ -406,7 +455,16 @@ export default function CacheBoard() {
       try {
         const hash = window.location.hash;
         if (hash && hash.startsWith("#patch=")) {
-          const decoded = JSON.parse(decodeURIComponent(atob(hash.slice(7))));
+          const raw = hash.slice(7);
+          let decoded;
+          try {
+            // current format: gzip + base64url
+            decoded = await decompressFromBase64Url(raw);
+          } catch {
+            // fall back to the old format (plain JSON, encodeURIComponent +
+            // btoa) so links shared before this change still work
+            decoded = JSON.parse(decodeURIComponent(atob(raw)));
+          }
           if (decoded?.elements) {
             setElements(decoded.elements);
             setCanvasBg(decoded.canvasBg || BONE);
@@ -1350,13 +1408,12 @@ ${customFontFaces}
 
   // share link (state packed into the URL hash — no backend needed for this starter)
   const handleShare = async () => {
-    const payload = JSON.stringify({
+    const encoded = await compressToBase64Url({
       elements,
       canvasBg,
       canvasPattern,
       canvasImage,
     });
-    const encoded = btoa(encodeURIComponent(payload));
     const url = `${window.location.origin}${window.location.pathname}#patch=${encoded}`;
     window.location.hash = `patch=${encoded}`;
     try {
