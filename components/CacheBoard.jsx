@@ -1045,19 +1045,34 @@ export default function CacheBoard() {
     }
   };
 
-  // drag (pointer events cover touch + mouse; divide by scale so screen px map to board px)
+  // drag (pointer events cover touch + mouse; divide by scale so screen px map to board px).
+  // When everything's selected (cmd/ctrl+a), dragging any single piece moves the whole
+  // group together — every piece's *starting* position is captured up front, and the same
+  // dx/dy delta is applied to all of them each move, so the group stays rigid relative to
+  // itself instead of drifting.
   const onPointerDownElement = (e, el) => {
     e.stopPropagation();
     pushHistory(elements);
-    setSelectedId(el.id);
-    setAllSelected(false);
-    dragRef.current = {
-      id: el.id,
-      startX: e.clientX,
-      startY: e.clientY,
-      origX: el.x,
-      origY: el.y,
-    };
+
+    if (allSelected) {
+      dragRef.current = {
+        group: true,
+        startX: e.clientX,
+        startY: e.clientY,
+        origPositions: elements.map((it) => ({ id: it.id, x: it.x, y: it.y })),
+      };
+    } else {
+      setSelectedId(el.id);
+      setAllSelected(false);
+      dragRef.current = {
+        id: el.id,
+        startX: e.clientX,
+        startY: e.clientY,
+        origX: el.x,
+        origY: el.y,
+      };
+    }
+
     window.addEventListener("pointermove", onPointerMoveDrag);
     window.addEventListener("pointerup", onPointerUpDrag);
   };
@@ -1066,7 +1081,17 @@ export default function CacheBoard() {
     if (!d) return;
     const dx = (e.clientX - d.startX) / scale;
     const dy = (e.clientY - d.startY) / scale;
-    updateElement(d.id, { x: d.origX + dx, y: d.origY + dy });
+
+    if (d.group) {
+      setElements((prev) =>
+        prev.map((it) => {
+          const orig = d.origPositions.find((p) => p.id === it.id);
+          return orig ? { ...it, x: orig.x + dx, y: orig.y + dy } : it;
+        }),
+      );
+    } else {
+      updateElement(d.id, { x: d.origX + dx, y: d.origY + dy });
+    }
   };
   const onPointerUpDrag = () => {
     dragRef.current = null;
