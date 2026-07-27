@@ -249,11 +249,8 @@ extra config.
   runtime and redirects genuine images to the same path the "image" button uses, regardless of which
   button was clicked to get there.
 
-- **cmd/ctrl+a selects everything on the patch**, native keyboard behavior on any OS. Delete/Backspace
-  while everything's selected clears the whole patch (with undo support, same as any other delete).
-  Escape cancels select-all without deleting anything. This isn't full multi-select — you can't drag
-  or restyle multiple pieces together yet, it's specifically the "select all, then delete" workflow
-  for clearing a patch.
+- **cmd/ctrl+a selects everything on the patch**, native keyboard behavior on any OS. Once everything's selected, dragging any selected piece moves the entire patch together while preserving every piece's relative position. Delete/Backspace removes the whole selection (with undo support), Escape clears the selection, and cmd/ctrl+c, cmd/ctrl+x, and cmd/ctrl+v operate on the entire patch as a single group. This still isn't full multi-select — you can't shift-click arbitrary subsets of pieces or apply style changes to multiple pieces at once — it's specifically an "everything selected" workflow.
+
 - **default patch background is `#fbfcf5`** — close to white, not stark white, so pasted images and
   cards still read as sitting on something rather than floating on pure white.
 
