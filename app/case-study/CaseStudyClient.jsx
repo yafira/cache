@@ -668,13 +668,14 @@ export default function CaseStudyClient() {
             className={styles.sectionNumber}
             style={{ background: "#f0bfd0" }}
           >
-            06 — three bugs worth naming
+            06 — four bugs worth naming
           </div>
           <h2 className={styles.sectionTitle}>what actually broke, and why</h2>
           <p className={styles.prose}>
             a case study that only shows the final state skips the part that's
-            actually evidence of how someone builds. three real ones, in the
-            order they surfaced.
+            actually evidence of how someone builds. four real ones, in the
+            order they surfaced — including one that took three wrong guesses
+            before the actual fix.
           </p>
 
           <motion.div whileHover={{ y: -3 }} className={styles.bugCard}>
@@ -765,6 +766,60 @@ export default function CaseStudyClient() {
                 source without proper cors headers just fails to load cleanly
                 (falls back to a blank card) instead of silently poisoning the
                 entire download.
+              </p>
+            </div>
+          </motion.div>
+
+          <motion.div whileHover={{ y: -3 }} className={styles.bugCard}>
+            <div className={styles.bugHeader}>
+              <span className={styles.bugTitle}>
+                background removal — three wrong guesses before the real one
+              </span>
+              <span className={styles.bugTag} style={{ background: "#f5e6a8" }}>
+                next.js / webpack
+              </span>
+            </div>
+            <div className={styles.bugBody}>
+              <div className={styles.bugSymptom}>
+                "background removal failed" — every time, on every browser, on
+                both localhost and the deployed site.
+              </div>
+              <p className={styles.prose}>
+                first guess: the library needs <code>SharedArrayBuffer</code>,
+                which needs two response headers to cross-origin-isolate the
+                page. added them, verified they actually landed with{" "}
+                <code>curl -I</code> against a real production server. no
+                change.
+              </p>
+              <p className={styles.prose}>
+                second guess, and a real bug this time: every image here is a{" "}
+                <code>data:</code> url, and the library's own check for "is this
+                an absolute path" uses a regex requiring <code>//</code> right
+                after the scheme — matches <code>http://</code>, not{" "}
+                <code>data:</code>. it was reading every pasted image as a
+                relative path and mangling it. found by installing the exact
+                package version locally and grepping its source for every{" "}
+                <code>.replace()</code> call until the actual line turned up.
+                fixed it by converting to a blob first. the exact same error
+                came back anyway.
+              </p>
+              <p className={styles.prose}>
+                the real one: the crash was inside a different library entirely
+                — <code>onnxruntime-web</code>, the ml runtime behind background
+                removal — in a function called <code>RelativeURL</code>, trying
+                to locate its own wasm file. webpack was rewriting that
+                function's internal <code>import.meta.url</code> reference into
+                something that isn't a plain string anymore, and the library's
+                own url-building code broke on it. that's exactly the subsystem
+                the library's own docs warn about: "currently only next.js 15 is
+                supported." this was running on 14.
+              </p>
+              <p className={styles.prose}>
+                the fix, after upgrading: load the library from a cdn url with a{" "}
+                <code>webpackIgnore</code> comment instead of importing it
+                locally. webpack never touches a webpack-ignored import, so it
+                never rewrites anything inside it — the bug simply has nothing
+                left to attach to.
               </p>
             </div>
           </motion.div>

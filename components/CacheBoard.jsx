@@ -834,9 +834,27 @@ export default function CacheBoard() {
     updateElement(id, { src: el.originalSrc });
   };
 
-  // paste support: images and plain text land straight on the board
+  // paste support: images and plain text land straight on the board.
+  // Also checks for this app's own clipboard format first (see
+  // writeToClipboard/CLIPBOARD_MARKER above) — a normal cmd+v is the more
+  // natural way to paste, and since copy/cut now write to the real OS
+  // clipboard, this is what makes "copy in one cacheboard tab, paste in a
+  // different one" actually work.
   useEffect(() => {
     const onPaste = (e) => {
+      const text = e.clipboardData?.getData("text/plain");
+      if (text) {
+        try {
+          const parsed = JSON.parse(text);
+          if (parsed?.[CLIPBOARD_MARKER] && Array.isArray(parsed.items)) {
+            addClipboardItems(parsed.items, BOARD_W / 2, BOARD_H / 2);
+            return;
+          }
+        } catch {
+          // not JSON, or not ours — fall through to normal paste handling
+        }
+      }
+
       const items = e.clipboardData?.items;
       if (!items) return;
       let handledImage = false;
@@ -850,9 +868,8 @@ export default function CacheBoard() {
         }
       }
       if (!handledImage) {
-        const text = e.clipboardData.getData("text/plain");
-        if (text && text.trim()) {
-          const trimmed = text.trim();
+        const trimmed = text?.trim();
+        if (trimmed) {
           if (URL_PATTERN.test(trimmed)) {
             addLink(trimmed);
           } else {
@@ -914,30 +931,46 @@ export default function CacheBoard() {
     });
   }, []);
 
-  // clipboardRef always holds an array now (even a single cut/copied piece
-  // is a one-item array) so cut/copy/paste work the same way whether it's
-  // one piece or the whole selection. Deliberately not wired to the OS
-  // clipboard or the existing cmd+v paste handler — that already means
-  // "paste from outside the app," keeping this separate avoids any
-  // ambiguity between the two.
+  // cut/copy write to the REAL OS clipboard (navigator.clipboard.writeText),
+  // not just an in-memory ref — a ref only exists inside one tab's JS
+  // memory, so copying in one cacheboard tab and pasting into a different
+  // one simply couldn't work before this. The payload is JSON with a marker
+  // key so paste can tell "this is Cache data" apart from any other text
+  // someone might have copied. clipboardRef is kept as a same-tab fallback
+  // in case the OS clipboard write/read fails (permissions, non-secure
+  // context, etc.) — the feature still works within one tab even then.
+  const CLIPBOARD_MARKER = "__cachePatchClipboard";
+
+  const writeToClipboard = async (items) => {
+    clipboardRef.current = items;
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify({ [CLIPBOARD_MARKER]: true, items }),
+      );
+    } catch {
+      // clipboard write blocked (permissions, insecure context, etc.) —
+      // clipboardRef.current above still covers same-tab cut/paste
+    }
+  };
+
   const cutElement = (id) => {
     const el = elements.find((e) => e.id === id);
     if (!el) return;
-    clipboardRef.current = [{ ...el }];
+    writeToClipboard([{ ...el }]);
     deleteElement(id);
   };
 
   const copyElement = (id) => {
     const el = elements.find((e) => e.id === id);
     if (!el) return;
-    clipboardRef.current = [{ ...el }];
+    writeToClipboard([{ ...el }]);
     setClipboardStatus("copied");
     setTimeout(() => setClipboardStatus(""), 1200);
   };
 
   const cutAllSelected = () => {
     if (!elements.length) return;
-    clipboardRef.current = elements.map((el) => ({ ...el }));
+    writeToClipboard(elements.map((el) => ({ ...el })));
     setElements((prev) => {
       pushHistory(prev);
       return [];
@@ -947,7 +980,7 @@ export default function CacheBoard() {
 
   const copyAllSelected = () => {
     if (!elements.length) return;
-    clipboardRef.current = elements.map((el) => ({ ...el }));
+    writeToClipboard(elements.map((el) => ({ ...el })));
     setClipboardStatus(`${elements.length} copied`);
     setTimeout(() => setClipboardStatus(""), 1200);
   };
@@ -959,11 +992,11 @@ export default function CacheBoard() {
     addElement({ ...el, id: newId(), x: el.x + dx, y: el.y + dy });
   };
 
-  // pastes everything currently in the clipboard, preserving each piece's
-  // position relative to the others (a copied group stays a group), offset
-  // so the group's center lands at the given board coordinates
-  const pasteFromClipboard = (boardX, boardY) => {
-    const items = clipboardRef.current;
+  // adds a group of pieces (from a copy/cut, from anywhere — same tab,
+  // another tab, another cacheboard entirely) preserving their position
+  // relative to each other, offset so the group's center lands at the
+  // given board coordinates
+  const addClipboardItems = (items, boardX, boardY) => {
     if (!items || !items.length) return;
     const minX = Math.min(...items.map((el) => el.x));
     const minY = Math.min(...items.map((el) => el.y));
@@ -980,6 +1013,32 @@ export default function CacheBoard() {
       })),
     );
     setSelectedId(null);
+  };
+
+  // right-click "paste" — tries the real OS clipboard first (so pasting
+  // something copied in a *different* tab or a different cacheboard
+  // entirely works), falls back to the same-tab ref if that fails. Doesn't
+  // pre-check whether there's "something to paste" before offering the
+  // button — the OS clipboard can't be read synchronously without a user
+  // gesture, so a disabled-by-default button would block a legitimate
+  // cross-tab paste based on stale local knowledge.
+  const pasteFromClipboard = async (boardX, boardY) => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const parsed = JSON.parse(text);
+      if (parsed?.[CLIPBOARD_MARKER] && Array.isArray(parsed.items)) {
+        addClipboardItems(parsed.items, boardX, boardY);
+        return;
+      }
+    } catch {
+      // not JSON, not ours, or clipboard read blocked — fall through
+    }
+    if (clipboardRef.current?.length) {
+      addClipboardItems(clipboardRef.current, boardX, boardY);
+    } else {
+      setClipboardStatus("nothing to paste");
+      setTimeout(() => setClipboardStatus(""), 1200);
+    }
   };
 
   // drag (pointer events cover touch + mouse; divide by scale so screen px map to board px)
@@ -2279,11 +2338,8 @@ ${customFontFaces}
                   setContextMenu(null);
                 }}
                 className={styles.contextMenuBtn}
-                disabled={!clipboardRef.current?.length}
               >
-                {clipboardRef.current?.length
-                  ? `paste${clipboardRef.current.length > 1 ? ` (${clipboardRef.current.length})` : ""}`
-                  : "nothing copied yet"}
+                paste
               </button>
             )}
           </div>

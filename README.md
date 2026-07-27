@@ -144,12 +144,17 @@ extra config.
   there's confidence the save actually happened — useful right before closing the tab.
 - **cmd/ctrl+c copies, cmd/ctrl+x cuts** — either the single selected piece, or, with select-all
   active (cmd/ctrl+a), every piece on the patch at once. Right-clicking any single piece opens a menu
-  with copy, cut, duplicate, and delete. Right-clicking empty patch space opens "paste," which places
-  whatever's in the clipboard at the cursor — a copied _group_ pastes back as a group, keeping every
-  piece's position relative to the others, not stacked on top of each other. Pasting more than one
-  piece is a single undo step, not one per piece. Deliberately not wired into the existing cmd+v paste
-  handler or the OS clipboard — that shortcut already means "paste from outside the app" (an image, a
-  link, text), and blending the two risked real ambiguity about which one wins on a given paste.
+  with copy, cut, duplicate, and delete. Pasting a copied _group_ keeps every piece's position
+  relative to the others (not stacked on top of each other), and is a single undo step regardless of
+  how many pieces landed. **Actually writes to the real OS clipboard now** (`navigator.clipboard`),
+  not just an in-memory ref — the first version only worked within one tab, because a ref lives
+  entirely in that tab's JS memory. That meant copying in one cacheboard tab and pasting into a
+  _different_ tab (or a different saved patch entirely) silently couldn't work — which is exactly
+  what looked like "copy-all isn't really working." Now cmd+v recognizes this app's own clipboard
+  format first (a JSON payload with a marker key) before falling through to its normal behavior
+  (image/link/text from anywhere else), and right-click "paste" tries the real clipboard too, falling
+  back to the same-tab ref only if the OS clipboard read fails (permissions, non-secure context).
+  Copy something in one open cacheboard tab, switch to another, cmd+v — it's there.
 
 - **the floating style panel can now be dragged out of the way.** It always opens at a fixed
   top-right position, which meant it could sit directly on top of whatever you just selected — most
