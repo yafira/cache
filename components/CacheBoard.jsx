@@ -630,6 +630,10 @@ export default function CacheBoard() {
       };
       reader.readAsDataURL(blob);
     } catch (err) {
+      // the real error (network failure, CORS, WASM instantiation, etc.) was
+      // being silently discarded — logging it is the only way to actually
+      // diagnose what's failing instead of guessing
+      console.error("background removal failed:", err);
       setBgRemovalError(
         "couldn't remove background — check your connection and try again",
       );

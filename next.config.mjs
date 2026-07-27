@@ -3,6 +3,28 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ["@imgly/background-removal", "onnxruntime-web"],
   },
+  // @imgly/background-removal's docs are explicit that SharedArrayBuffer
+  // needs to be available for its WASM execution — without cross-origin
+  // isolation, some onnxruntime-web WASM paths throw outright instead of
+  // gracefully falling back to a slower single-threaded mode. That requires
+  // these two headers. Using "credentialless" (not the stricter
+  // "require-corp") for COEP specifically: link cards load preview images
+  // from arbitrary third-party sites that don't send CORP headers —
+  // require-corp would silently block those images from loading as a side
+  // effect, credentialless cross-origin-isolates the page without that
+  // requirement (cross-origin resources just load without credentials,
+  // which is fine for public preview images).
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          { key: "Cross-Origin-Embedder-Policy", value: "credentialless" },
+        ],
+      },
+    ];
+  },
   webpack: (config) => {
     // onnxruntime-web (the ML runtime behind background removal) ships .mjs
     // files that use import.meta.url to locate their WASM binaries. Without

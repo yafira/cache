@@ -6,19 +6,18 @@ a moodboard tool that pastes, drags, and styles like you actually think — no f
 
 <!--
   Drop real captures here before this goes anywhere public — right now these are placeholders.
-  Suggested shots, in this order:
-  1. Empty patch, cursor mid-paste, first card landing
-  2. A card selected, floating style panel open, color picker mid-drag
-  3. A link card + a PDF file card side by side on the patch
-  4. The font picker open on a text piece
-  5. Full patch at real size — toolbar, canvas, floating panel, all visible
+  These four match the actual shotFrame slots in app/case-study/CaseStudyClient.jsx, in the order
+  they appear on the page:
+  1. Empty patch, cursor mid-paste, first card landing (section 01)
+  2. A link card + a PDF file card side by side on the patch (section 02, flow step)
+  3. The full patch UI at real size — toolbar, canvas, a real patch in progress (section 05)
+  4. The moodboard patch itself, exported from cache (section 05, right after #3)
 -->
 
 ![empty patch, mid-paste](./docs/screenshot-01-paste.png)
-![style panel + color picker](./docs/screenshot-02-style-panel.png)
-![link and file cards](./docs/screenshot-03-link-file-cards.png)
-![font picker](./docs/screenshot-04-font-picker.png)
-![full patch at real size](./docs/screenshot-05-full-patch.png)
+![link and file cards](./docs/screenshot-02-link-file-cards.png)
+![full patch at real size](./docs/screenshot-03-full-patch.png)
+![the moodboard, built inside cache](./docs/screenshot-04-moodboard.png)
 
 ## running it
 
@@ -51,11 +50,11 @@ then open http://localhost:3000
 Every tool in this space names its unit of work differently — Figma has files, Are.na has
 channels, Notion has pages, Cosmos has clusters. Cache's naming:
 
-| generic term                | cache's word |
-| --------------------------- | ------------ |
-| board / canvas              | **patch**    |
-| folder (a group of patches) | **stash**    |
-| saved / saved to database   | **cached**   |
+| generic term | cache's word |
+| --- | --- |
+| board / canvas | **patch** |
+| folder (a group of patches) | **stash** |
+| saved / saved to database | **cached** |
 
 A patch is the single infinite canvas — what `CacheBoard.jsx` renders. A stash is the
 organizational layer above it (a folder of patches) — not built in this starter; see the
@@ -128,6 +127,19 @@ extra config.
 
 ## known limits of this starter (the real v2 list)
 
+- **background removal was failing outright** — `@imgly/background-removal`'s own docs are explicit
+  that `SharedArrayBuffer` needs to be available for its WASM execution, which requires two response
+  headers (`Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy`) to cross-origin-
+  isolate the page. Without them, some `onnxruntime-web` WASM paths throw outright instead of
+  gracefully falling back to a slower single-threaded mode — which matches failing consistently on
+  both localhost and production, since it's a config gap, not a network issue. Added both headers via
+  `next.config.mjs`'s `headers()`. Used `Cross-Origin-Embedder-Policy: credentialless` specifically,
+  not the stricter `require-corp` — link cards load preview images from arbitrary third-party sites
+  that don't send `Cross-Origin-Resource-Policy` headers, and `require-corp` would've silently broken
+  those images as a side effect. `credentialless` cross-origin-isolates the page without that
+  requirement. Verified by starting a real production server and checking the actual response headers
+  with `curl -I`, not just trusting the config file looked right.
+
 - **the patch now actually fills the mobile screen.** It was fitting to width only, which works fine
   on desktop because laptop screens are close enough in aspect ratio to the 1400x900 board that
   width-fit happens to fill most of the height too — a portrait phone isn't close at all, so the
@@ -155,7 +167,7 @@ extra config.
   cards still read as sitting on something rather than floating on pure white.
 
 - **auto-saves to localStorage, per browser only.** Refreshing the page recovers your last patch —
-  no more losing work on an accidental reload. This is _not_ shared, synced across devices, or
+  no more losing work on an accidental reload. This is *not* shared, synced across devices, or
   backed by any server: it's purely "this browser remembers what was open last." The share link is
   still the only way to hand a patch to someone else, and it's a one-time snapshot, not a live
   document — editing after sharing doesn't update the link you already sent.

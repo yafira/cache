@@ -106,7 +106,7 @@ export default function CaseStudyClient() {
               try it live ↗
             </motion.a>
             <motion.a
-              href="https://github.com/YOUR-USERNAME/cache"
+              href="https://github.com/yafira/cache"
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.97 }}
               className={styles.ctaLink}
@@ -557,7 +557,21 @@ export default function CaseStudyClient() {
             deliberately arbitrary, so it never reads as a version number or a
             real system.
           </p>
-          <div className={styles.miniToolbar}>
+
+          <h2
+            className={styles.sectionTitle}
+            style={{ marginTop: 40, fontSize: "clamp(24px, 4vw, 30px)" }}
+          >
+            the screen, at full fidelity
+          </h2>
+          <div className={styles.shotFrame} style={{ minHeight: 320 }}>
+            <div className={styles.shotLabel}>
+              [ screenshot: the full patch UI — toolbar, canvas, and a real
+              patch in progress, at real size ]
+            </div>
+          </div>
+
+          <div className={styles.miniToolbar} style={{ marginTop: 32 }}>
             <span className={styles.miniBrand}>CACHE</span>
             <span className={styles.miniBtn}>text</span>
             <div className={styles.miniSwatchRow}>
@@ -853,7 +867,7 @@ export default function CaseStudyClient() {
 
       <footer className={styles.footer}>
         <a href="/">try cache ↗</a> ·{" "}
-        <a href="https://github.com/YOUR-USERNAME/cache">source ↗</a>
+        <a href="https://github.com/yafira/cache">source ↗</a>
       </footer>
     </div>
   );
