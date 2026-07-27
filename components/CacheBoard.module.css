@@ -541,3 +541,93 @@
 .openBtn:hover {
   background: #f0bfd0;
 }
+
+/* Mobile */
+
+@media (max-width: 639px) {
+  .toolbar {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .brand {
+    font-size: 16px;
+    margin-right: 4px;
+  }
+
+  .btn {
+    padding: 6px 8px;
+    gap: 4px;
+    font-size: 10px;
+  }
+
+  .toolbarEnd {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .boardWrap {
+    padding: 8px;
+    justify-content: flex-start;
+  }
+
+  .panel {
+    top: 12px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100vh - 24px);
+  }
+
+  .mobileSheet {
+    max-height: 70vh;
+    padding: 14px;
+  }
+
+  .bgPanel {
+    width: min(220px, calc(100vw - 24px));
+  }
+
+  .linkTextInput {
+    font-size: 16px; /* prevents iOS zoom */
+  }
+
+  .iconBtn,
+  .iconBtnPlain,
+  .panelMinimizeBtn {
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .smallBtn,
+  .frontBackBtn {
+    min-height: 44px;
+  }
+
+  .copyStatus {
+    font-size: 9px;
+  }
+
+  .bgPatternBtn {
+    min-height: 36px;
+  }
+
+  .bgImagePreview {
+    width: 32px;
+    height: 32px;
+  }
+
+  .contextMenu {
+    max-width: calc(100vw - 24px);
+  }
+
+  .emptyState {
+    padding: 20px;
+    font-size: 11px;
+  }
+}
