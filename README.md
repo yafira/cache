@@ -14,9 +14,9 @@ a moodboard tool that pastes, drags, and styles like you actually think — no f
   4. The moodboard patch itself, exported from cache (section 05, right after #3)
 -->
 
-![empty patch, mid-paste](./screenshots/01-paste.png)
-![link and file cards](./screenshots/02-link-file-cards.gif)
-![full patch at real size](./screenshots/03-full-patch.png)
+![empty patch, mid-paste](public/screenshots/01-paste.png)
+![link and file cards](public/screenshots/02-link-file-cards.gif)
+![full patch at real size](public/screenshots/03-full-patch.png)
 
 ## running it
 
@@ -126,9 +126,9 @@ extra config.
 
 ## inspiration
 
-![the moodboard, built inside cache](./screenshots/04-braun.png)
-![the moodboard, built inside cache](./screenshots/04-tag.png)
-![the moodboard, built inside cache](./screenshots/04-instrument.gif)
+![the moodboard, built inside cache](/public/screenshots/04-braun.png)
+![the moodboard, built inside cache](/public/screenshots/04-tag.png)
+![the moodboard, built inside cache](/public/screenshots/04-instrument.gif)
 
 ## known limits of this starter (the real v2 list)
 
