@@ -166,24 +166,46 @@
 }
 
 .panelDragHandle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 12px;
+  margin: -4px 0 8px;
+  border-bottom: 1px dashed rgba(236, 231, 219, 0.15);
+}
+.panelDragGrip {
+  display: flex;
+  align-items: center;
+  color: rgba(236, 231, 219, 0.4);
+  cursor: grab;
+  touch-action: none;
+}
+.panelDragGrip:hover {
+  color: rgba(236, 231, 219, 0.75);
+}
+.panelDragGrip:active {
+  cursor: grabbing;
+}
+.panelDragLabel {
+  flex: 1;
   font-family: var(--font-mono);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: rgba(236, 231, 219, 0.4);
-  text-align: center;
-  padding: 2px 0 12px;
-  margin: -4px 0 8px;
-  cursor: grab;
-  touch-action: none;
   user-select: none;
-  border-bottom: 1px dashed rgba(236, 231, 219, 0.15);
 }
-.panelDragHandle:hover {
-  color: rgba(236, 231, 219, 0.7);
+.panelMinimizeBtn {
+  display: flex;
+  align-items: center;
+  color: rgba(236, 231, 219, 0.5);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
 }
-.panelDragHandle:active {
-  cursor: grabbing;
+.panelMinimizeBtn:hover {
+  color: #ece7db;
 }
 
 .helpCorner {
@@ -321,6 +343,38 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.contextMenu {
+  position: fixed;
+  background: #1c1b19;
+  border: 1px solid rgba(236, 231, 219, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  padding: 4px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+}
+.contextMenuBtn {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  color: rgba(236, 231, 219, 0.85);
+  text-align: left;
+  cursor: pointer;
+}
+.contextMenuBtn:hover:not(:disabled) {
+  background: rgba(236, 231, 219, 0.1);
+  color: #ece7db;
+}
+.contextMenuBtn:disabled {
+  color: rgba(236, 231, 219, 0.3);
+  cursor: default;
 }
 
 .bgPanelLabel {

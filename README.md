@@ -127,6 +127,27 @@ extra config.
 
 ## known limits of this starter (the real v2 list)
 
+- **the floating panel's drag handle is icon-only now** (a grip icon, not a text label) — meant to
+  read as intuitively draggable without needing an instruction. The handle row also shows the
+  selected piece's type and a minimize toggle. Minimizing collapses the panel down to just that
+  header row, so it's out of the way without needing to drag it off the piece entirely; clicking it
+  again expands the full controls back.
+
+- **autosave switched from localStorage to IndexedDB.** localStorage's ~5-10MB quota was getting
+  exceeded fast with more than a few embedded images (base64 is already ~33% larger than the source
+  file) — and once the quota was hit, the _entire_ save silently failed, not just the newest addition.
+  That's exactly why "some images saved, some didn't." IndexedDB's quota is dramatically larger and
+  is the right tool for this amount of data. A one-time migration reads any pre-existing localStorage
+  save on first load and clears it after moving it over.
+- **cmd/ctrl+s (or the new save button next to undo) saves immediately**, bypassing the normal
+  500ms autosave debounce, and shows a status message ("cached" or a real error if it fails) so
+  there's confidence the save actually happened — useful right before closing the tab.
+- **cmd/ctrl+x cuts the selected piece**, and right-clicking any piece opens a menu with cut,
+  duplicate, and delete. Right-clicking empty patch space opens a "paste" option if something's been
+  cut, placing it at the cursor. Deliberately not wired into the existing cmd+v paste handler or the
+  OS clipboard — that shortcut already means "paste from outside the app" (an image, a link, text),
+  and blending the two risked real ambiguity about which one wins on a given paste.
+
 - **the floating style panel can now be dragged out of the way.** It always opens at a fixed
   top-right position, which meant it could sit directly on top of whatever you just selected — most
   noticeable with a large image. A small "drag to move" handle at the top of the panel lets you

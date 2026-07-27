@@ -15,6 +15,9 @@ import {
   FileText,
   ExternalLink,
   Paperclip,
+  Save,
+  GripVertical,
+  Minus,
 } from "lucide-react";
 import styles from "./CacheBoard.module.css";
 import ColorPicker from "./ColorPicker";
@@ -233,6 +236,49 @@ function escapeAttr(str) {
   );
 }
 
+// minimal IndexedDB key-value wrapper — swapped in for localStorage
+// specifically because localStorage's ~5-10MB quota gets exceeded fast once
+// a patch has more than a few images (base64 encoding is already ~33%
+// larger than the source file), and when that quota is hit, the *entire*
+// save silently fails, not just the newest addition. IndexedDB's quota is
+// dramatically larger and is the right tool for this amount of data.
+const IDB_NAME = "cache-db";
+const IDB_STORE = "patches";
+const IDB_KEY = "lastPatch";
+
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains(IDB_STORE)) {
+        req.result.createObjectStore(IDB_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbSet(key, value) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, "readwrite");
+    tx.objectStore(IDB_STORE).put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function idbGet(key) {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, "readonly");
+    const req = tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
 function loadImage(src, allowCrossOrigin) {
   return new Promise((resolve) => {
     const img = new window.Image();
@@ -264,7 +310,11 @@ export default function CacheBoard() {
   const fileUploadInputRef = useRef(null);
   const [downloadPanelOpen, setDownloadPanelOpen] = useState(false);
   const [panelPos, setPanelPos] = useState({ x: 0, y: 0 });
+  const [panelMinimized, setPanelMinimized] = useState(false);
   const panelDragRef = useRef(null);
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, targetId, boardX, boardY } | null
+  const contextMenuRef = useRef(null);
+  const clipboardRef = useRef(null); // holds a cut element's data, for paste-elsewhere via right-click
   const downloadPanelRef = useRef(null);
   const downloadButtonRef = useRef(null);
   const [copyStatus, setCopyStatus] = useState("");
@@ -342,29 +392,41 @@ export default function CacheBoard() {
 
   // load state from URL hash on mount (the "share link" mechanism)
   useEffect(() => {
-    try {
-      const hash = window.location.hash;
-      if (hash && hash.startsWith("#patch=")) {
-        const decoded = JSON.parse(decodeURIComponent(atob(hash.slice(7))));
-        if (decoded?.elements) {
-          setElements(decoded.elements);
-          setCanvasBg(decoded.canvasBg || BONE);
-          setCanvasPattern(decoded.canvasPattern || "none");
-          setCanvasImage(decoded.canvasImage || null);
-          const maxZ = Math.max(
-            1,
-            ...decoded.elements.map((e) => e.zIndex || 1),
-          );
-          zCounter.current = maxZ + 1;
-          idCounter = decoded.elements.length + 1;
-          return;
+    const restore = async () => {
+      try {
+        const hash = window.location.hash;
+        if (hash && hash.startsWith("#patch=")) {
+          const decoded = JSON.parse(decodeURIComponent(atob(hash.slice(7))));
+          if (decoded?.elements) {
+            setElements(decoded.elements);
+            setCanvasBg(decoded.canvasBg || BONE);
+            setCanvasPattern(decoded.canvasPattern || "none");
+            setCanvasImage(decoded.canvasImage || null);
+            const maxZ = Math.max(
+              1,
+              ...decoded.elements.map((e) => e.zIndex || 1),
+            );
+            zCounter.current = maxZ + 1;
+            idCounter = decoded.elements.length + 1;
+            return;
+          }
         }
-      }
-      // no share link — recover the last auto-saved session for this browser,
-      // if there is one
-      const saved = localStorage.getItem("cache:lastPatch");
-      if (saved) {
-        const decoded = JSON.parse(saved);
+        // no share link — recover the last auto-saved session for this
+        // browser, if there is one
+        let decoded = await idbGet(IDB_KEY).catch(() => null);
+        if (!decoded) {
+          // one-time migration path: earlier versions saved to localStorage
+          // before it was clear that quota was too small for real use
+          const legacy = localStorage.getItem("cache:lastPatch");
+          if (legacy) {
+            try {
+              decoded = JSON.parse(legacy);
+              localStorage.removeItem("cache:lastPatch");
+            } catch {
+              // corrupted legacy save — ignore it
+            }
+          }
+        }
         if (decoded?.elements?.length) {
           setElements(decoded.elements);
           setCanvasBg(decoded.canvasBg || BONE);
@@ -377,28 +439,39 @@ export default function CacheBoard() {
           zCounter.current = maxZ + 1;
           idCounter = decoded.elements.length + 1;
         }
+      } catch (e) {
+        // ignore malformed hash or corrupted saved state
       }
-    } catch (e) {
-      // ignore malformed hash or corrupted local save
-    }
+    };
+    restore();
   }, []);
 
-  // auto-save to localStorage so a refresh doesn't lose the patch — this is
-  // per-browser only (not shared, not synced across devices); the share link
-  // is still the only way to hand a patch to someone else
+  // auto-save so a refresh doesn't lose the patch — this is per-browser only
+  // (not shared, not synced across devices); the share link is still the
+  // only way to hand a patch to someone else
   const autosaveTimer = useRef(null);
+  const [saveStatus, setSaveStatus] = useState("");
+  const saveNow = useCallback(async () => {
+    try {
+      await idbSet(IDB_KEY, { elements, canvasBg, canvasPattern, canvasImage });
+      setSaveStatus("cached");
+    } catch (e) {
+      setSaveStatus("couldn't save — patch may be too large");
+    }
+    setTimeout(() => setSaveStatus(""), 1500);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elements, canvasBg, canvasPattern, canvasImage]);
+
   useEffect(() => {
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     autosaveTimer.current = setTimeout(() => {
-      try {
-        localStorage.setItem(
-          "cache:lastPatch",
-          JSON.stringify({ elements, canvasBg, canvasPattern, canvasImage }),
-        );
-      } catch (e) {
-        // storage full or unavailable — silently skip, the app still works
-        // for the current session, it just won't survive a refresh
-      }
+      idbSet(IDB_KEY, { elements, canvasBg, canvasPattern, canvasImage }).catch(
+        () => {
+          // storage full or unavailable — silently skip the *background*
+          // autosave; the manual save button/shortcut still surfaces a real
+          // error if this keeps failing
+        },
+      );
     }, 500);
     return () => clearTimeout(autosaveTimer.current);
   }, [elements, canvasBg, canvasPattern, canvasImage]);
@@ -735,6 +808,36 @@ export default function CacheBoard() {
     updateElement(id, { zIndex: zCounter.current });
   };
   const sendToBack = (id) => updateElement(id, { zIndex: 0 });
+
+  // cut: removes the piece and remembers it, so it can be placed elsewhere
+  // via right-click "paste" on empty board space. Deliberately not wired to
+  // the OS clipboard or the existing cmd+v paste handler — that already
+  // means "paste from outside the app," keeping this separate avoids any
+  // ambiguity between the two.
+  const cutElement = (id) => {
+    const el = elements.find((e) => e.id === id);
+    if (!el) return;
+    clipboardRef.current = { ...el };
+    deleteElement(id);
+  };
+
+  const duplicateElement = (id) => {
+    const el = elements.find((e) => e.id === id);
+    if (!el) return;
+    const { dx, dy } = nextOffset();
+    addElement({ ...el, id: newId(), x: el.x + dx, y: el.y + dy });
+  };
+
+  const pasteFromClipboard = (boardX, boardY) => {
+    const el = clipboardRef.current;
+    if (!el) return;
+    addElement({
+      ...el,
+      id: newId(),
+      x: boardX - el.w / 2,
+      y: boardY - el.h / 2,
+    });
+  };
 
   // drag (pointer events cover touch + mouse; divide by scale so screen px map to board px)
   const onPointerDownElement = (e, el) => {
@@ -1225,6 +1328,21 @@ ${customFontFaces}
     return () => window.removeEventListener("pointerdown", onClickOutside);
   }, [downloadPanelOpen]);
 
+  // close the right-click context menu on any click elsewhere, or on scroll
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = (e) => {
+      if (contextMenuRef.current?.contains(e?.target)) return;
+      setContextMenu(null);
+    };
+    window.addEventListener("pointerdown", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      window.removeEventListener("pointerdown", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [contextMenu]);
+
   // keyboard shortcuts: delete/backspace removes the selected piece (or every
   // piece, if select-all is active), cmd/ctrl+a selects all, cmd/ctrl+z undoes
   useEffect(() => {
@@ -1265,6 +1383,22 @@ ${customFontFaces}
       if ((e.key === "Delete" || e.key === "Backspace") && selectedId) {
         e.preventDefault();
         deleteElement(selectedId);
+        return;
+      }
+
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.key.toLowerCase() === "x" &&
+        selectedId
+      ) {
+        e.preventDefault();
+        cutElement(selectedId);
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        saveNow();
         return;
       }
 
@@ -1502,11 +1636,18 @@ ${customFontFaces}
         </div>
 
         <div className={styles.toolbarEnd}>
-          {copyStatus && (
+          {(copyStatus || saveStatus) && (
             <span className={`${styles.copyStatus} ${styles.hideOnMobile}`}>
-              {copyStatus}
+              {copyStatus || saveStatus}
             </span>
           )}
+          <button
+            onClick={saveNow}
+            className={styles.btn}
+            title="save (cmd/ctrl+s)"
+          >
+            <Save size={13} /> <span className={styles.hideBelowMd}>save</span>
+          </button>
           <button
             onClick={undo}
             className={styles.btn}
@@ -1590,6 +1731,17 @@ ${customFontFaces}
               onPointerDown={() => {
                 setSelectedId(null);
                 setAllSelected(false);
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                const rect = boardRef.current.getBoundingClientRect();
+                setContextMenu({
+                  x: e.clientX,
+                  y: e.clientY,
+                  targetId: null,
+                  boardX: (e.clientX - rect.left) / scale,
+                  boardY: (e.clientY - rect.top) / scale,
+                });
               }}
               onDragOver={(e) => {
                 e.preventDefault();
@@ -1737,6 +1889,17 @@ ${customFontFaces}
                   <div
                     key={el.id}
                     onPointerDown={(e) => onPointerDownElement(e, el)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedId(el.id);
+                      setAllSelected(false);
+                      setContextMenu({
+                        x: e.clientX,
+                        y: e.clientY,
+                        targetId: el.id,
+                      });
+                    }}
                     style={{
                       position: "absolute",
                       left: el.x,
@@ -1910,36 +2073,99 @@ ${customFontFaces}
           </div>
         </div>
 
+        {contextMenu && (
+          <div
+            ref={contextMenuRef}
+            className={styles.contextMenu}
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            {contextMenu.targetId ? (
+              <>
+                <button
+                  onClick={() => {
+                    cutElement(contextMenu.targetId);
+                    setContextMenu(null);
+                  }}
+                  className={styles.contextMenuBtn}
+                >
+                  cut
+                </button>
+                <button
+                  onClick={() => {
+                    duplicateElement(contextMenu.targetId);
+                    setContextMenu(null);
+                  }}
+                  className={styles.contextMenuBtn}
+                >
+                  duplicate
+                </button>
+                <button
+                  onClick={() => {
+                    deleteElement(contextMenu.targetId);
+                    setContextMenu(null);
+                  }}
+                  className={styles.contextMenuBtn}
+                >
+                  delete
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => {
+                  pasteFromClipboard(contextMenu.boardX, contextMenu.boardY);
+                  setContextMenu(null);
+                }}
+                className={styles.contextMenuBtn}
+                disabled={!clipboardRef.current}
+              >
+                {clipboardRef.current ? "paste" : "nothing cut yet"}
+              </button>
+            )}
+          </div>
+        )}
+
         {/* style panel: floats in on desktop when something's selected, bottom sheet on mobile */}
         {!isMobile && selected && (
           <div
             className={styles.panel}
             style={{ transform: `translate(${panelPos.x}px, ${panelPos.y}px)` }}
           >
-            <div
-              className={styles.panelDragHandle}
-              onPointerDown={onPointerDownPanelDrag}
-              onDoubleClick={() => setPanelPos({ x: 0, y: 0 })}
-              title="drag to move, double-click to reset position"
-            >
-              ⠿ drag to move
+            <div className={styles.panelDragHandle}>
+              <span
+                onPointerDown={onPointerDownPanelDrag}
+                onDoubleClick={() => setPanelPos({ x: 0, y: 0 })}
+                title="drag to move, double-click to reset position"
+                className={styles.panelDragGrip}
+              >
+                <GripVertical size={14} />
+              </span>
+              <span className={styles.panelDragLabel}>{selected.type}</span>
+              <button
+                onClick={() => setPanelMinimized((v) => !v)}
+                className={styles.panelMinimizeBtn}
+                title={panelMinimized ? "expand" : "minimize"}
+              >
+                {panelMinimized ? <ChevronUp size={14} /> : <Minus size={14} />}
+              </button>
             </div>
-            <StylePanelContent
-              selected={selected}
-              isMobile={isMobile}
-              updateElement={updateElement}
-              deleteElement={deleteElement}
-              setSelectedId={setSelectedId}
-              bringToFront={bringToFront}
-              sendToBack={sendToBack}
-              onAdjustStart={() => pushHistory(elements)}
-              removeImageBackground={removeImageBackground}
-              restoreImageBackground={restoreImageBackground}
-              bgRemovalId={bgRemovalId}
-              bgRemovalError={bgRemovalError}
-              customFonts={customFonts}
-              fontUploadInputRef={fontUploadInputRef}
-            />
+            {!panelMinimized && (
+              <StylePanelContent
+                selected={selected}
+                isMobile={isMobile}
+                updateElement={updateElement}
+                deleteElement={deleteElement}
+                setSelectedId={setSelectedId}
+                bringToFront={bringToFront}
+                sendToBack={sendToBack}
+                onAdjustStart={() => pushHistory(elements)}
+                removeImageBackground={removeImageBackground}
+                restoreImageBackground={restoreImageBackground}
+                bgRemovalId={bgRemovalId}
+                bgRemovalError={bgRemovalError}
+                customFonts={customFonts}
+                fontUploadInputRef={fontUploadInputRef}
+              />
+            )}
           </div>
         )}
 
@@ -2055,7 +2281,7 @@ function StylePanelContent({
   return (
     <>
       <div className={styles.panelHeader}>
-        <span className={styles.typeLabel}>{selected.type}</span>
+        {isMobile && <span className={styles.typeLabel}>{selected.type}</span>}
         <div className={styles.iconRow}>
           <button
             onClick={() => deleteElement(selected.id)}
