@@ -323,7 +323,8 @@ export default function CacheBoard() {
   const panelDragRef = useRef(null);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, targetId, boardX, boardY } | null
   const contextMenuRef = useRef(null);
-  const clipboardRef = useRef(null); // holds a cut element's data, for paste-elsewhere via right-click
+  const clipboardRef = useRef(null); // holds an array of copied/cut elements, for paste-elsewhere via right-click
+  const [clipboardStatus, setClipboardStatus] = useState("");
   const downloadPanelRef = useRef(null);
   const downloadButtonRef = useRef(null);
   const [copyStatus, setCopyStatus] = useState("");
@@ -839,16 +840,58 @@ export default function CacheBoard() {
   };
   const sendToBack = (id) => updateElement(id, { zIndex: 0 });
 
-  // cut: removes the piece and remembers it, so it can be placed elsewhere
-  // via right-click "paste" on empty board space. Deliberately not wired to
-  // the OS clipboard or the existing cmd+v paste handler — that already
-  // means "paste from outside the app," keeping this separate avoids any
+  // batch version of addElement — used for pasting more than one piece at
+  // once, so the whole paste is a single undo step instead of one per piece
+  const addElements = useCallback((els) => {
+    if (!els.length) return;
+    let z = zCounter.current;
+    const full = els.map((el) => {
+      z += 1;
+      return { rotation: 0, opacity: 1, radius: 0, ...el, zIndex: z };
+    });
+    zCounter.current = z;
+    setElements((prev) => {
+      pushHistory(prev);
+      return [...prev, ...full];
+    });
+  }, []);
+
+  // clipboardRef always holds an array now (even a single cut/copied piece
+  // is a one-item array) so cut/copy/paste work the same way whether it's
+  // one piece or the whole selection. Deliberately not wired to the OS
+  // clipboard or the existing cmd+v paste handler — that already means
+  // "paste from outside the app," keeping this separate avoids any
   // ambiguity between the two.
   const cutElement = (id) => {
     const el = elements.find((e) => e.id === id);
     if (!el) return;
-    clipboardRef.current = { ...el };
+    clipboardRef.current = [{ ...el }];
     deleteElement(id);
+  };
+
+  const copyElement = (id) => {
+    const el = elements.find((e) => e.id === id);
+    if (!el) return;
+    clipboardRef.current = [{ ...el }];
+    setClipboardStatus("copied");
+    setTimeout(() => setClipboardStatus(""), 1200);
+  };
+
+  const cutAllSelected = () => {
+    if (!elements.length) return;
+    clipboardRef.current = elements.map((el) => ({ ...el }));
+    setElements((prev) => {
+      pushHistory(prev);
+      return [];
+    });
+    setAllSelected(false);
+  };
+
+  const copyAllSelected = () => {
+    if (!elements.length) return;
+    clipboardRef.current = elements.map((el) => ({ ...el }));
+    setClipboardStatus(`${elements.length} copied`);
+    setTimeout(() => setClipboardStatus(""), 1200);
   };
 
   const duplicateElement = (id) => {
@@ -858,15 +901,27 @@ export default function CacheBoard() {
     addElement({ ...el, id: newId(), x: el.x + dx, y: el.y + dy });
   };
 
+  // pastes everything currently in the clipboard, preserving each piece's
+  // position relative to the others (a copied group stays a group), offset
+  // so the group's center lands at the given board coordinates
   const pasteFromClipboard = (boardX, boardY) => {
-    const el = clipboardRef.current;
-    if (!el) return;
-    addElement({
-      ...el,
-      id: newId(),
-      x: boardX - el.w / 2,
-      y: boardY - el.h / 2,
-    });
+    const items = clipboardRef.current;
+    if (!items || !items.length) return;
+    const minX = Math.min(...items.map((el) => el.x));
+    const minY = Math.min(...items.map((el) => el.y));
+    const maxX = Math.max(...items.map((el) => el.x + el.w));
+    const maxY = Math.max(...items.map((el) => el.y + el.h));
+    const offsetX = boardX - (minX + maxX) / 2;
+    const offsetY = boardY - (minY + maxY) / 2;
+    addElements(
+      items.map((el) => ({
+        ...el,
+        id: newId(),
+        x: el.x + offsetX,
+        y: el.y + offsetY,
+      })),
+    );
+    setSelectedId(null);
   };
 
   // drag (pointer events cover touch + mouse; divide by scale so screen px map to board px)
@@ -1416,13 +1471,25 @@ ${customFontFaces}
         return;
       }
 
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.key.toLowerCase() === "x" &&
-        selectedId
-      ) {
-        e.preventDefault();
-        cutElement(selectedId);
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "x") {
+        if (allSelected) {
+          e.preventDefault();
+          cutAllSelected();
+        } else if (selectedId) {
+          e.preventDefault();
+          cutElement(selectedId);
+        }
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
+        if (allSelected) {
+          e.preventDefault();
+          copyAllSelected();
+        } else if (selectedId) {
+          e.preventDefault();
+          copyElement(selectedId);
+        }
         return;
       }
 
@@ -1666,9 +1733,9 @@ ${customFontFaces}
         </div>
 
         <div className={styles.toolbarEnd}>
-          {(copyStatus || saveStatus) && (
+          {(copyStatus || saveStatus || clipboardStatus) && (
             <span className={`${styles.copyStatus} ${styles.hideOnMobile}`}>
-              {copyStatus || saveStatus}
+              {copyStatus || saveStatus || clipboardStatus}
             </span>
           )}
           <button
@@ -1908,7 +1975,7 @@ ${customFontFaces}
                 }}
               >
                 {allSelected
-                  ? `${elements.length} SELECTED — DELETE TO CLEAR, ESC TO CANCEL`
+                  ? `${elements.length} SELECTED — ⌘C COPY, ⌘X CUT, DELETE TO CLEAR, ESC TO CANCEL`
                   : `${BOARD_W}×${BOARD_H} / ${String(elements.length).padStart(3, "0")} ITEMS`}
               </div>
 
@@ -2113,6 +2180,15 @@ ${customFontFaces}
               <>
                 <button
                   onClick={() => {
+                    copyElement(contextMenu.targetId);
+                    setContextMenu(null);
+                  }}
+                  className={styles.contextMenuBtn}
+                >
+                  copy
+                </button>
+                <button
+                  onClick={() => {
                     cutElement(contextMenu.targetId);
                     setContextMenu(null);
                   }}
@@ -2146,9 +2222,11 @@ ${customFontFaces}
                   setContextMenu(null);
                 }}
                 className={styles.contextMenuBtn}
-                disabled={!clipboardRef.current}
+                disabled={!clipboardRef.current?.length}
               >
-                {clipboardRef.current ? "paste" : "nothing cut yet"}
+                {clipboardRef.current?.length
+                  ? `paste${clipboardRef.current.length > 1 ? ` (${clipboardRef.current.length})` : ""}`
+                  : "nothing copied yet"}
               </button>
             )}
           </div>
