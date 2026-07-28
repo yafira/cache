@@ -584,7 +584,7 @@
 
 @media (max-width: 640px) {
   .hero {
-    padding: 44px 18px 36px;
+    padding: 60px 20px 48px;
   }
   .heroTitle {
     font-size: clamp(40px, 15vw, 60px);
@@ -597,8 +597,9 @@
     margin-top: 28px;
   }
   .tag {
-    position: static;
-    margin-top: 24px;
+    position: absolute;
+    top: 24px;
+    right: 18px;
     width: 84px;
   }
   .body {
@@ -636,100 +637,19 @@
     font-size: 11px;
   }
   .ctaRow {
-    gap: 8px;
-  }
-  .ctaLink {
-    flex: 1;
-    text-align: center;
-    padding: 12px 14px;
-  }
-  .bugHeader {
-    padding: 10px 12px;
-  }
-  .miniToolbar {
-    gap: 6px;
-    padding: 8px 10px;
-  }
-  .miniBtn {
-    font-size: 9px;
-    padding: 5px 8px;
-  }
-}
-
-@media (max-width: 400px) {
-  .heroTitle {
-    font-size: 40px;
-  }
-  .sectionTitle {
-    font-size: 22px;
-  }
-  .heroMetaItem {
-    font-size: 10px;
-  }
-}
-
-/* media queries */
-
-@media (max-width: 640px) {
-  .hero {
-    padding: 44px 18px 36px;
-  }
-  .heroTitle {
-    font-size: clamp(40px, 15vw, 60px);
-  }
-  .heroThesis {
-    font-size: 15.5px;
-  }
-  .heroMeta {
-    gap: 18px;
-    margin-top: 28px;
-  }
-  .tag {
-    position: static;
-    margin-top: 24px;
-    width: 84px;
-  }
-  .body {
-    padding: 0 18px;
-  }
-  .section {
-    padding: 40px 0 36px;
-  }
-  .sectionTitle {
-    font-size: clamp(24px, 7vw, 30px);
-  }
-  .prose {
-    font-size: 15px;
-  }
-  .stackRow {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-  .evolution {
     flex-direction: column;
-  }
-  .evolutionStep {
-    min-width: 0;
-  }
-  .refGrid {
-    grid-template-columns: 1fr;
-  }
-  .flowStep {
-    grid-template-columns: 28px 1fr;
     gap: 12px;
-  }
-  .flowStepNum {
-    width: 24px;
-    height: 24px;
-    font-size: 11px;
-  }
-  .ctaRow {
-    gap: 8px;
+    align-items: stretch;
   }
   .ctaLink {
-    flex: 1;
     text-align: center;
-    padding: 12px 14px;
+    padding: 16px;
+    font-size: 15px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
   }
   .bugHeader {
     padding: 10px 12px;
