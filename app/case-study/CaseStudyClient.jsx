@@ -2,6 +2,7 @@
 
 import { motion, useScroll, useSpring } from "framer-motion";
 import styles from "./case-study.module.css";
+import Head from "next/head";
 import Image from "next/image";
 
 const fadeUp = {
@@ -44,6 +45,23 @@ export default function CaseStudyClient() {
 
   return (
     <div className={styles.page}>
+      <Head>
+        <title>Cache Case Study</title>
+        <meta
+          name="description"
+          content="A deep dive into the design and development of Cache, a moodboard tool for the low-stakes moments."
+        />
+        <meta property="og:title" content="Cache Case Study" />
+        <meta
+          property="og:description"
+          content="A deep dive into the design and development of Cache, a moodboard tool for the low-stakes moments."
+        />
+        <meta property="og:url" content="https://cacheboard.vercel.app/" />
+        <meta property="og:image" content="/app/icon.svg" />
+        <meta property="og:image:alt" content="Cache blank tag icon" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+      </Head>
       <motion.div
         style={{
           position: "fixed",
