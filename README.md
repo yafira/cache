@@ -1,6 +1,6 @@
 # cache
 
-a moodboard tool that pastes, drags, and styles like you actually think — no figma detour required.
+A moodboard tool where you paste, drag, and style inspiration like you actually think.
 
 ## screenshots
 
