@@ -2,6 +2,8 @@
 
 A moodboard tool where you paste, drag, and style inspiration like you actually think.
 
+<i>create a patch ⬩ collect your stash ⬩ keep everything cached.</i>
+
 ## screenshots
 
 <!--
