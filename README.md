@@ -130,14 +130,15 @@ extra config.
 
 ## mobile view with and without floating window
 
-| Mobile View | Demo |
-|-------------|------|
+| Mobile View                                           | Demo                                                  |
+| ----------------------------------------------------- | ----------------------------------------------------- |
 | ![Mobile view 1](/public/screenshots/mobile-view.png) | ![Mobile view 2](/public/screenshots/mobile-view.gif) |
 
 ## inspiration
 
 ![the moodboard, built inside cache](/public/screenshots/04-braun.png)
 ![the moodboard, built inside cache](/public/screenshots/04-tag.png)
+![the moodboard, built inside cache](/public/screenshots/04-instrument.gif)
 
 ## known limits of this starter (the real v2 list)
 
