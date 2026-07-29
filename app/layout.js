@@ -44,9 +44,33 @@ const monoAlt = JetBrains_Mono({
   variable: "--font-mono-alt",
 });
 
+const SITE_URL = "https://cacheboard.vercel.app";
+
 export const metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "cache",
   description: "paste anything. arrange it your way. cache it.",
+  openGraph: {
+    title: "cache",
+    description: "paste anything. arrange it your way. cache it.",
+    url: SITE_URL,
+    siteName: "cache",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "cache — a moodboard tool that pastes, drags, and styles like you actually think.",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "cache",
+    description: "paste anything. arrange it your way. cache it.",
+    images: ["/opengraph-image"],
+  },
 };
 
 export default function RootLayout({ children }) {

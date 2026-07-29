@@ -5,11 +5,14 @@
 html,
 body {
   height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
   font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   margin: 0;
+  -webkit-text-size-adjust: 100%;
 }
 
 button {

@@ -382,6 +382,7 @@ export default function CacheBoard() {
   const [copyStatus, setCopyStatus] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [scale, setScale] = useState(1);
+  const scaleRef = useRef(1);
   const boardRef = useRef(null);
   const boardWrapRef = useRef(null);
   const dragRef = useRef(null);
@@ -434,22 +435,51 @@ export default function CacheBoard() {
       const mobile = vw < MOBILE_BREAKPOINT;
       setIsMobile(mobile);
       const wrapEl = boardWrapRef.current;
-      const availableW = wrapEl ? wrapEl.clientWidth : vw;
-      const availableH = wrapEl ? wrapEl.clientHeight : window.innerHeight;
+      // fall back to window dims if the wrap isn't measurable yet (e.g. ref
+      // not attached on the very first tick) so we never divide by ~0
+      const availableW = (wrapEl && wrapEl.clientWidth) || vw;
+      const availableH =
+        (wrapEl && wrapEl.clientHeight) ||
+        (window.visualViewport
+          ? window.visualViewport.height
+          : window.innerHeight);
       const padding = mobile ? 16 : 64;
 
       if (mobile) {
         const scaleW = (availableW - padding) / BOARD_W;
         const scaleH = (availableH - padding) / BOARD_H;
-        setScale(Math.max(scaleW, scaleH));
+        const next = Math.max(scaleW, scaleH);
+        // clamp to a sane range: guards against a momentarily 0-height
+        // wrap producing Infinity/NaN, or a huge phone producing >1
+        const clamped =
+          next > 0 && Number.isFinite(next) ? Math.min(next, 2) : 1;
+        setScale(clamped);
+        scaleRef.current = clamped;
       } else {
         const next = Math.min(1, (availableW - padding) / BOARD_W);
-        setScale(next > 0 ? next : 1);
+        const clamped = next > 0 && Number.isFinite(next) ? next : 1;
+        setScale(clamped);
+        scaleRef.current = clamped;
       }
     };
     compute();
+    // rerun after layout settles once fonts/first paint land, and again on
+    // any resize/rotation, including mobile's address-bar show/hide which
+    // fires on visualViewport, not always on window
+    const raf = requestAnimationFrame(compute);
     window.addEventListener("resize", compute);
-    return () => window.removeEventListener("resize", compute);
+    window.addEventListener("orientationchange", compute);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", compute);
+    }
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", compute);
+      window.removeEventListener("orientationchange", compute);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", compute);
+      }
+    };
   }, []);
 
   // load state from URL hash on mount (the "share link" mechanism)
@@ -561,6 +591,36 @@ export default function CacheBoard() {
       return [...prev, full];
     });
     if (autoSelect) setSelectedId(full.id);
+
+    // the board can be zoomed/panned well beyond the visible wrap (mobile's
+    // cover-fit scale in particular), so a piece placed at board-space
+    // coordinates can land completely outside the current scroll position
+    // with nothing on screen to suggest it worked — bring it into view
+    const wrapEl = boardWrapRef.current;
+    if (wrapEl) {
+      const s = scaleRef.current || 1;
+      const pieceLeft = full.x * s;
+      const pieceTop = full.y * s;
+      const pieceW = (full.w || 0) * s;
+      const pieceH = (full.h || 0) * s;
+      const pieceRight = pieceLeft + pieceW;
+      const pieceBottom = pieceTop + pieceH;
+
+      const needsScrollX =
+        pieceLeft < wrapEl.scrollLeft ||
+        pieceRight > wrapEl.scrollLeft + wrapEl.clientWidth;
+      const needsScrollY =
+        pieceTop < wrapEl.scrollTop ||
+        pieceBottom > wrapEl.scrollTop + wrapEl.clientHeight;
+
+      if (needsScrollX || needsScrollY) {
+        wrapEl.scrollTo({
+          left: Math.max(0, pieceLeft + pieceW / 2 - wrapEl.clientWidth / 2),
+          top: Math.max(0, pieceTop + pieceH / 2 - wrapEl.clientHeight / 2),
+          behavior: "smooth",
+        });
+      }
+    }
   }, []);
 
   const addText = () => {
