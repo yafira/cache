@@ -2538,7 +2538,7 @@ ${customFontFaces}
           <div
             className={styles.mobileSheet}
             style={{
-              maxHeight: "55vh",
+              maxHeight: panelMinimized ? "auto" : "55vh",
               boxShadow: "0 -4px 20px rgba(0,0,0,0.4)",
             }}
           >
@@ -2557,6 +2557,8 @@ ${customFontFaces}
               bgRemovalError={bgRemovalError}
               customFonts={customFonts}
               fontUploadInputRef={fontUploadInputRef}
+              panelMinimized={panelMinimized}
+              setPanelMinimized={setPanelMinimized}
             />
           </div>
         )}
@@ -2634,6 +2636,8 @@ function StylePanelContent({
   bgRemovalError,
   customFonts,
   fontUploadInputRef,
+  panelMinimized,
+  setPanelMinimized,
 }) {
   return (
     <>
@@ -2648,6 +2652,15 @@ function StylePanelContent({
           </button>
           {isMobile && (
             <button
+              onClick={() => setPanelMinimized((v) => !v)}
+              className={styles.iconBtnPlain}
+              title={panelMinimized ? "expand" : "minimize"}
+            >
+              {panelMinimized ? <ChevronUp size={18} /> : <Minus size={18} />}
+            </button>
+          )}
+          {isMobile && (
+            <button
               onClick={() => setSelectedId(null)}
               className={styles.iconBtnPlain}
             >
@@ -2657,211 +2670,224 @@ function StylePanelContent({
         </div>
       </div>
 
-      {selected.type === "image" && BG_REMOVAL_ENABLED && (
-        <div className={styles.field}>
-          background removal
-          {bgRemovalId === selected.id ? (
-            <span className={styles.processingLabel}>removing background…</span>
-          ) : (
-            <div className={styles.frontBackRow} style={{ marginTop: 4 }}>
-              <button
-                onClick={() => removeImageBackground(selected.id)}
-                className={styles.smallBtn}
-                style={{ marginTop: 0 }}
-              >
-                remove background
-              </button>
-              {selected.originalSrc && (
-                <button
-                  onClick={() => restoreImageBackground(selected.id)}
-                  className={styles.smallBtn}
-                  style={{ marginTop: 0 }}
-                >
-                  restore original
-                </button>
+      {!(isMobile && panelMinimized) && (
+        <>
+          {selected.type === "image" && BG_REMOVAL_ENABLED && (
+            <div className={styles.field}>
+              background removal
+              {bgRemovalId === selected.id ? (
+                <span className={styles.processingLabel}>
+                  removing background…
+                </span>
+              ) : (
+                <div className={styles.frontBackRow} style={{ marginTop: 4 }}>
+                  <button
+                    onClick={() => removeImageBackground(selected.id)}
+                    className={styles.smallBtn}
+                    style={{ marginTop: 0 }}
+                  >
+                    remove background
+                  </button>
+                  {selected.originalSrc && (
+                    <button
+                      onClick={() => restoreImageBackground(selected.id)}
+                      className={styles.smallBtn}
+                      style={{ marginTop: 0 }}
+                    >
+                      restore original
+                    </button>
+                  )}
+                </div>
+              )}
+              {bgRemovalError && bgRemovalId === null && (
+                <span className={styles.errorLabel}>{bgRemovalError}</span>
               )}
             </div>
           )}
-          {bgRemovalError && bgRemovalId === null && (
-            <span className={styles.errorLabel}>{bgRemovalError}</span>
+
+          {(selected.type === "color" || selected.type === "text") && (
+            <div className={styles.field}>
+              {selected.type === "color" ? "fill" : "background"}
+              <ColorPicker
+                value={selected.bg === "transparent" ? "#ffffff" : selected.bg}
+                onChange={(hex) => updateElement(selected.id, { bg: hex })}
+                onAdjustStart={onAdjustStart}
+                label="fill"
+              />
+            </div>
           )}
-        </div>
-      )}
 
-      {(selected.type === "color" || selected.type === "text") && (
-        <div className={styles.field}>
-          {selected.type === "color" ? "fill" : "background"}
-          <ColorPicker
-            value={selected.bg === "transparent" ? "#ffffff" : selected.bg}
-            onChange={(hex) => updateElement(selected.id, { bg: hex })}
-            onAdjustStart={onAdjustStart}
-            label="fill"
-          />
-        </div>
-      )}
+          {selected.type === "color" && (
+            <div className={styles.field}>
+              shape
+              <div className={styles.bgPatternRow}>
+                {SHAPES.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => updateElement(selected.id, { shape: s.id })}
+                    className={`${styles.bgPatternBtn} ${
+                      (selected.shape || "rect") === s.id
+                        ? styles.bgPatternBtnActive
+                        : ""
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-      {selected.type === "color" && (
-        <div className={styles.field}>
-          shape
-          <div className={styles.bgPatternRow}>
-            {SHAPES.map((s) => (
+          {selected.type === "text" && (
+            <>
+              <div className={styles.field}>
+                text color
+                <ColorPicker
+                  value={selected.textColor || INK}
+                  onChange={(hex) =>
+                    updateElement(selected.id, { textColor: hex })
+                  }
+                  onAdjustStart={onAdjustStart}
+                  label="text color"
+                />
+              </div>
+              <label className={styles.field}>
+                font size — {selected.fontSize || 16}px
+                <input
+                  onPointerDown={onAdjustStart}
+                  type="range"
+                  min="10"
+                  max="48"
+                  value={selected.fontSize || 16}
+                  onChange={(e) =>
+                    updateElement(selected.id, {
+                      fontSize: Number(e.target.value),
+                    })
+                  }
+                />
+              </label>
+              <div className={styles.field}>
+                font
+                <div className={styles.bgPatternRow}>
+                  {FONT_PRESETS.map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() =>
+                        updateElement(selected.id, { fontFamily: f.id })
+                      }
+                      style={{ fontFamily: f.cssVar }}
+                      className={`${styles.bgPatternBtn} ${
+                        (selected.fontFamily || "mono") === f.id
+                          ? styles.bgPatternBtnActive
+                          : ""
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                  {customFonts.map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() =>
+                        updateElement(selected.id, {
+                          fontFamily: `custom:${f.id}`,
+                        })
+                      }
+                      style={{ fontFamily: `"${f.family}"` }}
+                      className={`${styles.bgPatternBtn} ${
+                        selected.fontFamily === `custom:${f.id}`
+                          ? styles.bgPatternBtnActive
+                          : ""
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => fontUploadInputRef.current?.click()}
+                    className={styles.bgPatternBtn}
+                  >
+                    + upload
+                  </button>
+                </div>
+              </div>
               <button
-                key={s.id}
-                onClick={() => updateElement(selected.id, { shape: s.id })}
-                className={`${styles.bgPatternBtn} ${
-                  (selected.shape || "rect") === s.id
-                    ? styles.bgPatternBtnActive
-                    : ""
-                }`}
+                onClick={() =>
+                  updateElement(selected.id, {
+                    bg:
+                      selected.bg === "transparent" ? "#ffffff" : "transparent",
+                  })
+                }
+                className={styles.smallBtn}
               >
-                {s.label}
+                {selected.bg === "transparent"
+                  ? "add background"
+                  : "make transparent"}
               </button>
-            ))}
-          </div>
-        </div>
-      )}
+            </>
+          )}
 
-      {selected.type === "text" && (
-        <>
+          {!(
+            selected.type === "color" &&
+            selected.shape &&
+            selected.shape !== "rect"
+          ) && (
+            <label className={styles.field}>
+              corner radius — {selected.radius ?? 0}px
+              <input
+                onPointerDown={onAdjustStart}
+                type="range"
+                min="0"
+                max="80"
+                value={selected.radius ?? 0}
+                onChange={(e) =>
+                  updateElement(selected.id, { radius: Number(e.target.value) })
+                }
+              />
+            </label>
+          )}
+
           <div className={styles.field}>
-            text color
-            <ColorPicker
-              value={selected.textColor || INK}
-              onChange={(hex) => updateElement(selected.id, { textColor: hex })}
+            rotation — {selected.rotation ?? 0}°
+            <RotationKnob
+              value={selected.rotation ?? 0}
+              onChange={(deg) => updateElement(selected.id, { rotation: deg })}
               onAdjustStart={onAdjustStart}
-              label="text color"
             />
           </div>
+
           <label className={styles.field}>
-            font size — {selected.fontSize || 16}px
+            opacity — {Math.round((selected.opacity ?? 1) * 100)}%
             <input
               onPointerDown={onAdjustStart}
               type="range"
               min="10"
-              max="48"
-              value={selected.fontSize || 16}
+              max="100"
+              value={Math.round((selected.opacity ?? 1) * 100)}
               onChange={(e) =>
-                updateElement(selected.id, { fontSize: Number(e.target.value) })
+                updateElement(selected.id, {
+                  opacity: Number(e.target.value) / 100,
+                })
               }
             />
           </label>
-          <div className={styles.field}>
-            font
-            <div className={styles.bgPatternRow}>
-              {FONT_PRESETS.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() =>
-                    updateElement(selected.id, { fontFamily: f.id })
-                  }
-                  style={{ fontFamily: f.cssVar }}
-                  className={`${styles.bgPatternBtn} ${
-                    (selected.fontFamily || "mono") === f.id
-                      ? styles.bgPatternBtnActive
-                      : ""
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-              {customFonts.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() =>
-                    updateElement(selected.id, { fontFamily: `custom:${f.id}` })
-                  }
-                  style={{ fontFamily: `"${f.family}"` }}
-                  className={`${styles.bgPatternBtn} ${
-                    selected.fontFamily === `custom:${f.id}`
-                      ? styles.bgPatternBtnActive
-                      : ""
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-              <button
-                onClick={() => fontUploadInputRef.current?.click()}
-                className={styles.bgPatternBtn}
-              >
-                + upload
-              </button>
-            </div>
+
+          <div className={styles.frontBackRow}>
+            <button
+              onClick={() => bringToFront(selected.id)}
+              className={styles.frontBackBtn}
+            >
+              <ChevronUp size={13} /> front
+            </button>
+            <button
+              onClick={() => sendToBack(selected.id)}
+              className={styles.frontBackBtn}
+            >
+              <ChevronDown size={13} /> back
+            </button>
           </div>
-          <button
-            onClick={() =>
-              updateElement(selected.id, {
-                bg: selected.bg === "transparent" ? "#ffffff" : "transparent",
-              })
-            }
-            className={styles.smallBtn}
-          >
-            {selected.bg === "transparent"
-              ? "add background"
-              : "make transparent"}
-          </button>
         </>
       )}
-
-      {!(
-        selected.type === "color" &&
-        selected.shape &&
-        selected.shape !== "rect"
-      ) && (
-        <label className={styles.field}>
-          corner radius — {selected.radius ?? 0}px
-          <input
-            onPointerDown={onAdjustStart}
-            type="range"
-            min="0"
-            max="80"
-            value={selected.radius ?? 0}
-            onChange={(e) =>
-              updateElement(selected.id, { radius: Number(e.target.value) })
-            }
-          />
-        </label>
-      )}
-
-      <div className={styles.field}>
-        rotation — {selected.rotation ?? 0}°
-        <RotationKnob
-          value={selected.rotation ?? 0}
-          onChange={(deg) => updateElement(selected.id, { rotation: deg })}
-          onAdjustStart={onAdjustStart}
-        />
-      </div>
-
-      <label className={styles.field}>
-        opacity — {Math.round((selected.opacity ?? 1) * 100)}%
-        <input
-          onPointerDown={onAdjustStart}
-          type="range"
-          min="10"
-          max="100"
-          value={Math.round((selected.opacity ?? 1) * 100)}
-          onChange={(e) =>
-            updateElement(selected.id, {
-              opacity: Number(e.target.value) / 100,
-            })
-          }
-        />
-      </label>
-
-      <div className={styles.frontBackRow}>
-        <button
-          onClick={() => bringToFront(selected.id)}
-          className={styles.frontBackBtn}
-        >
-          <ChevronUp size={13} /> front
-        </button>
-        <button
-          onClick={() => sendToBack(selected.id)}
-          className={styles.frontBackBtn}
-        >
-          <ChevronDown size={13} /> back
-        </button>
-      </div>
     </>
   );
 }
