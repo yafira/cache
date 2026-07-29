@@ -1,8 +1,10 @@
 # cache
 
-A moodboard tool where you paste, drag, and style inspiration like you actually think.
+- A creative cache for the ideas worth keeping.
 
-<i>create a patch ⬩ collect your stash ⬩ keep everything cached.</i>
+- A moodboard tool where you paste, drag, and style inspiration like you actually think.
+
+<i>create a patch ⬩ collect your stash ⬩ keep everything cached!</i>
 
 ## screenshots
 
