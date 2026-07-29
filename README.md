@@ -71,8 +71,10 @@ Pinterest is for discovery. Are.na is for archives. Cosmos is for collecting. Mi
 Figma/FigJam is for collaboration.
 
 **cache is a browser window that becomes a personal visual thinking space.**
-Not a board you build toward a finished state — a room you keep walking back into. Open it, hit
-paste, it's already there.
+
+Not a board you build toward a finished state — a room you keep walking back into. Open it, hit paste, it's already there.
+
+Cache is a creative workspace for collecting, arranging, and crafting ideas without the friction of traditional design tools.
 
 ## tech stack (planned — this starter uses hand-rolled canvas logic as a proof of concept)
 
