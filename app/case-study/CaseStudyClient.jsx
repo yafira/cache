@@ -51,16 +51,18 @@ export default function CaseStudyClient() {
           name="description"
           content="A deep dive into the design and development of Cache, a moodboard tool for the low-stakes moments."
         />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta property="og:title" content="Cache Case Study" />
         <meta
           property="og:description"
           content="A deep dive into the design and development of Cache, a moodboard tool for the low-stakes moments."
         />
         <meta property="og:url" content="https://cacheboard.vercel.app/" />
-        <meta property="og:image" content="/app/icon.svg" />
+        <meta property="og:image" content="/icon.svg" />
         <meta property="og:image:alt" content="Cache blank tag icon" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
+        <link rel="icon" href="/favicon.ico" />
       </Head>
       <motion.div
         style={{
@@ -122,7 +124,7 @@ export default function CaseStudyClient() {
               whileTap={{ scale: 0.97 }}
               className={`${styles.ctaLink} ${styles.ctaLinkPrimary}`}
             >
-              try it live ↗
+              try it live
             </motion.a>
             <motion.a
               href="https://github.com/yafira/cache"
@@ -130,7 +132,7 @@ export default function CaseStudyClient() {
               whileTap={{ scale: 0.97 }}
               className={styles.ctaLink}
             >
-              view source ↗
+              view source
             </motion.a>
           </motion.div>
 
@@ -194,7 +196,6 @@ export default function CaseStudyClient() {
       </section>
 
       <div className={styles.body}>
-        {/* 01 — the idea */}
         <motion.section
           className={styles.section}
           style={{ borderTopColor: "#c9bce0" }}
@@ -248,7 +249,6 @@ export default function CaseStudyClient() {
           </div>
         </motion.section>
 
-        {/* 02 — how it actually works */}
         <motion.section
           className={styles.section}
           style={{ borderTopColor: "#f5e6a8" }}
@@ -339,7 +339,6 @@ export default function CaseStudyClient() {
           </div>
         </motion.section>
 
-        {/* 03 — the landscape */}
         <motion.section
           className={styles.section}
           style={{ borderTopColor: "#f0bfd0" }}
@@ -404,7 +403,6 @@ export default function CaseStudyClient() {
           </div>
         </motion.section>
 
-        {/* 04 — naming */}
         <motion.section
           className={styles.section}
           style={{ borderTopColor: "#c9bce0" }}
@@ -468,7 +466,6 @@ export default function CaseStudyClient() {
           </p>
         </motion.section>
 
-        {/* 05 — visual direction */}
         <motion.section
           className={styles.section}
           style={{ borderTopColor: "#f5e6a8" }}
@@ -725,7 +722,6 @@ export default function CaseStudyClient() {
           </div>
         </motion.section>
 
-        {/* 06 — bugs */}
         <motion.section
           className={styles.section}
           style={{ borderTopColor: "#f0bfd0" }}
@@ -813,7 +809,6 @@ export default function CaseStudyClient() {
               </p>
             </div>
           </motion.div>
-
           <motion.div whileHover={{ y: -3 }} className={styles.bugCard}>
             <div className={styles.bugHeader}>
               <span className={styles.bugTitle}>
@@ -892,7 +887,6 @@ export default function CaseStudyClient() {
           </motion.div>
         </motion.section>
 
-        {/* 07 — stack */}
         <motion.section
           className={styles.section}
           style={{ borderTopColor: "#c9bce0" }}
@@ -962,7 +956,6 @@ export default function CaseStudyClient() {
           </div>
         </motion.section>
 
-        {/* 09 — what's next */}
         <motion.section
           className={styles.section}
           style={{ borderTopColor: "#f5e6a8" }}
@@ -995,7 +988,7 @@ export default function CaseStudyClient() {
       </div>
 
       <footer className={styles.footer}>
-        <a href="/">try cache ↗</a> ·{" "}
+        <a href="https://cacheboard.vercel.app/">try cache ↗</a> ·{" "}
         <a href="https://github.com/yafira/cache">source ↗</a>
       </footer>
     </div>

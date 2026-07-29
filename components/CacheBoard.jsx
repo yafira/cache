@@ -43,7 +43,6 @@ const INK = "#0d0d0c";
 const BONE = "#fbfcf5";
 const CONCRETE = "#8f8b81";
 const GRAPHITE = "#1c1b19";
-const BONE_TEXT = "#ece7db";
 const LAVENDER = "#c9bce0";
 const BUTTER = "#f5e6a8";
 const PINK = "#f0bfd0";
