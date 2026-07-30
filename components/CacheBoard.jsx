@@ -2141,7 +2141,6 @@ ${customFontFaces}
                   : "0 0 0 1px rgba(236,231,219,0.08), 0 12px 40px rgba(0,0,0,0.35)",
                 transform: `scale(${scale})`,
                 transformOrigin: "top left",
-                touchAction: "none",
                 overflow: "hidden",
               }}
             >

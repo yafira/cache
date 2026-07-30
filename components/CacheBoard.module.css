@@ -119,6 +119,12 @@
   position: relative;
 }
 
+.boardPage {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 .boardWrap {
   flex: 1;
   overflow: auto;
