@@ -284,13 +284,17 @@
   letter-spacing: 0.1em;
   padding: 8px;
   border: 1px solid rgba(236, 231, 219, 0.3);
-  color: rgba(236, 231, 219, 0.8);
-  background: none;
+  color: #ece7db; /* Change to full solid light color */
+  background: #1c1b19; /* Add a solid dark background matching your theme */
+  opacity: 1; /* Ensure full opacity */
   cursor: pointer;
   margin-top: 12px;
 }
+
 .smallBtn:hover {
   border-color: #ece7db;
+  background: #ece7db; /* Invert colors on hover */
+  color: #1c1b19;
 }
 
 .frontBackRow {
@@ -330,6 +334,13 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.bgPanel,
+.linkPopupContainer {
+  width: 280px; /* Increase this value so the button has room */
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 .contextMenu {
@@ -595,11 +606,24 @@
   }
 
   .bgPanel {
-    width: min(220px, calc(100vw - 24px));
+    position: absolute;
+    right: 8px; /* Keep it pinned away from the right edge */
+    left: auto;
+    width: min(
+      280px,
+      calc(100vw - 24px)
+    ); /* Constrain width so it never overflows */
+    box-sizing: border-box;
   }
 
   .linkTextInput {
     font-size: 16px; /* prevents iOS zoom */
+    flex: 1;
+    min-width: 0;
+  }
+
+  .smallBtn {
+    white-space: nowrap; /* Keeps the word 'add' from wrapping */
   }
 
   .iconBtn,
