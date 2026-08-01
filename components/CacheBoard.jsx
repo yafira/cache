@@ -23,7 +23,6 @@ import {
 import styles from "./CacheBoard.module.css";
 import ColorPicker from "./ColorPicker";
 
-// constants
 const BOARD_W = 1400;
 const BOARD_H = 900;
 const MOBILE_BREAKPOINT = 768;
@@ -1158,7 +1157,6 @@ export default function CacheBoard() {
     window.removeEventListener("pointerup", onPointerUpDrag);
   };
 
-  // resize
   const onPointerDownResize = (e, el) => {
     e.stopPropagation();
     pushHistory(elements);

@@ -284,16 +284,16 @@
   letter-spacing: 0.1em;
   padding: 8px;
   border: 1px solid rgba(236, 231, 219, 0.3);
-  color: #ece7db; /* Change to full solid light color */
-  background: #1c1b19; /* Add a solid dark background matching your theme */
-  opacity: 1; /* Ensure full opacity */
+  color: #ece7db;
+  background: #1c1b19;
+  opacity: 1;
   cursor: pointer;
   margin-top: 12px;
 }
 
 .smallBtn:hover {
   border-color: #ece7db;
-  background: #ece7db; /* Invert colors on hover */
+  background: #ece7db;
   color: #1c1b19;
 }
 
@@ -338,7 +338,7 @@
 
 .bgPanel,
 .linkPopupContainer {
-  width: 280px; /* Increase this value so the button has room */
+  width: 280px;
   padding: 16px;
   box-sizing: border-box;
 }
@@ -607,12 +607,9 @@
 
   .bgPanel {
     position: absolute;
-    right: 8px; /* Keep it pinned away from the right edge */
+    right: 8px;
     left: auto;
-    width: min(
-      280px,
-      calc(100vw - 24px)
-    ); /* Constrain width so it never overflows */
+    width: min(280px, calc(100vw - 24px));
     box-sizing: border-box;
   }
 
@@ -623,7 +620,7 @@
   }
 
   .smallBtn {
-    white-space: nowrap; /* Keeps the word 'add' from wrapping */
+    white-space: nowrap;
   }
 
   .iconBtn,

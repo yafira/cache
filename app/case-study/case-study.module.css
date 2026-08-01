@@ -158,7 +158,7 @@
   text-align: left;
   padding: 12px 14px;
   border: 2px solid #0d0d0c;
-  white-space: normal; /* Allows text wrapping on mobile */
+  white-space: normal;
   word-break: break-word;
 }
 
@@ -172,7 +172,6 @@
   font-weight: 700;
 }
 
-/* Keeps the cache row highlighted and ensures text wraps correctly */
 .table tr.tableSelf td {
   background: #f5e6a8 !important;
   font-weight: 700;
@@ -340,10 +339,9 @@
   align-items: center;
   justify-content: center;
   background: rgba(201, 188, 224, 0.08);
-  overflow: hidden; /* <-- Add this to clip any overflowing content */
+  overflow: hidden;
 }
 
-/* Ensure images inside the frame scale properly */
 .shotFrame img {
   max-width: 100%;
   height: auto;
