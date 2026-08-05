@@ -44,7 +44,7 @@ const monoAlt = JetBrains_Mono({
   variable: "--font-mono-alt",
 });
 
-const SITE_URL = "https://cacheboard.vercel.app";
+const SITE_URL = "https://cachecraft.io/";
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
@@ -56,14 +56,7 @@ export const metadata = {
     url: SITE_URL,
     siteName: "cache",
     type: "website",
-    images: [
-      {
-        url: "/opengraph-image",
-        width: 1200,
-        height: 630,
-        alt: "cache — a moodboard tool that pastes, drags, and styles like you actually think.",
-      },
-    ],
+    images: ["/cache-og-image.png"],
   },
   twitter: {
     card: "summary_large_image",
