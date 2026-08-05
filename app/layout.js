@@ -58,12 +58,6 @@ export const metadata = {
     type: "website",
     images: ["/cache-og-image.png"],
   },
-  twitter: {
-    card: "summary_large_image",
-    title: "cache",
-    description: "paste anything. arrange it your way. cache it.",
-    images: ["/opengraph-image"],
-  },
 };
 
 export default function RootLayout({ children }) {
